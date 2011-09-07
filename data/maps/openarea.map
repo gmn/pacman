@@ -1,0 +1,69 @@
+Version 1
+
+{ name:   "Big Open" }
+
+{ width: 40 }  // 0 - 39
+{ height: 31 } // 0 - 30
+{ hshift: 0 }
+{ vshift: 0 }
+
+{ llcorner: 0 0 }
+
+{ section: squares }
+
+{ total: 1240 }
+
+// ( 2 3 0 ) big dot
+// ( 2 2 0 ) small dot
+// ( 2 1 0 ) no dot
+// ( 1 0 1 ) wall
+ 
+
+// top+bottom
+//{ ( 1 0 1 ) ( 0-39 0,30 ) }
+{ ( 1 0 1 ) ( 1-38 1,29 ) }
+// left+right
+//{ ( 1 0 1 ) ( 0,39 1-29 ) }
+{ ( 1 0 1 ) ( 1,38 2-28 ) }
+
+// open fill
+{ ( 2 2 0 ) ( 3-36 3-27 ) }
+
+// big dots in the corners
+{ ( 2 3 0 ) ( 2 2,28 ) }
+{ ( 2 3 0 ) ( 37 2,28 ) }
+
+{ ( 2 2 0 ) ( 3-36 2,28 ) }
+{ ( 2 2 0 ) ( 2,37 2-28 ) }
+
+
+//
+// Entities Section
+//
+{ section: entities }
+{ total: 5 }
+
+// player spawn
+// ( type pix.x pix.y ) <== offsets
+{ ( 2048 0 0 ) ( 19 7 ) }
+
+// side teleports
+// ( type x y ) <=== destination coordinates
+
+// ghost spawns
+// ( type x-offset color ) ( x y )
+{ ( 2 7 1 ) ( 15 19 ) }
+{ ( 2 7 2 ) ( 17 19 ) }
+{ ( 2 7 3 ) ( 19 19 ) }
+{ ( 2 7 4 ) ( 21 19 ) }
+//{ ( 2 7 1 ) ( 15 25 ) }
+//{ ( 2 7 2 ) ( 17 25 ) }
+//{ ( 2 7 3 ) ( 19 25 ) }
+//{ ( 2 7 4 ) ( 21 25 ) }
+
+// mapentity_t types
+// ME_PLAYERSPAWN = 2048,
+// ME_GHOSTSPAWN  = 2,
+// ME_FRUITSPAWN  = 4
+// ME_TELEPORT = 8
+

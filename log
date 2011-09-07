@@ -1,0 +1,2872 @@
+
+ok, my initial design idea was to have a square either be a wall
+or open, then I changed it to a square having the possibility of
+a wall on each of its 4 sides.  I just booted up pacman, the actual
+game and am noticing that its actually the first idea.
+
+its 28x31 x,y.  each little dot is a square.  and walls are composed
+out of square sized units.  but they are draw recessed and with curvy
+corners.
+
+so they use just the most basic of grid system.  a square can either
+be null, open, or a wall.  but they stylize it a bit, making it look
+cooler, rounding the corners, etc..
+
+ultimately the point of doing this is to be creative, but in the 
+interest of keeping focused and just getting it done I am going to 
+change all of my stuff to match pacman's.  and just keeping moving
+that way.
+
+anymore creativity is nearly worthless compared to industry and follow-
+through.  completing a task is the number 1 goal.  being able creative is
+just one of the benefits that arise from lots and lots of hardwork.  this
+process tends to engender looking for a ratio.  i would definitely say
+taht it appears that the percent of creativeness is far less than 1%.
+
+perhaps later, when an engine is built.  when content creation tools are
+built.  but for the time being, I'm on a deathmarch to just get something
+to work at all.
+
+-----------
+I settled on 40x30.  that is plenty to run around a board, run from bad
+guys, and negotiate tunnels, and implement an A* etc...  I successfully
+re-wrote the map-file style, updated the parser.  and also added the
+functionality to draw spans.  so I can now specify a horizontal, vertical
+or diagonal span of squares just by going (0-39 1).  tight.  me likes.
+
+Now I'm going to write a sorting algorithm to put all the squares in the
+right place, then I'm going to printf Drawthem in 40x30 style.
+
+------------
+ok, did all that.  re-wrote the map format.  the map format goes (1 1 1) (x y).
+and now I'm wondering why I didn't put (x y ) 1st. oh well
+
+comma's are somewhat working.  for other ideas to make the map parser better
+see svn log for r10.  
+
+so I have a map parser that more or less works and supports some fairly 
+powerful syntax.  My map is kind of hair-brained looking.  I would like to
+clean it up and complete it.  Then I think I'm going to go out, find the
+unemployment office and go into psych.
+-------------
+todo: next
+
+* Map Entities - the map does walls and open spaces.  add entities, 
+	treasure items, character world-spawn, monster spawns, moving
+	items, moving doors, regular doors...
+* Work on the memory handler.  Add the page scheme.  Audit V_free, which
+	I am not even sure if it works at all.
+* Keyboard/Mouse Input 
+* simple renderer - just something basic that draws the map squares
+* player & player movement - now draw the player and move the player
+* collision detection (done in conjunction with the player) this should be
+	substantially simpler than before.  just dont let the players 
+	bounding box enter a "wall" square.  that simple.
+------------------------------------
+rappin - reading code from of all things a FF7 clone.  I feel that I have
+the map reader code and map implementation at a state where I can move away 
+from it.  Not bad really.  I took yesterday off becaues I was exhausted. 
+but really I got the map-parser done in a 13 hour stretch on Monday and tied
+up the loose ends for 2 hours tuesday morning.  It works, I am satisfied.
+Adding the entites as listed about is trivial at this point as far as the 
+parser is concerned.  funny, I should mention that a headhunter just called
+me offering a 3-month contract pos in Ames for well into the 20$/hour for
+UNIX+SQL+Perl.  heh.  and I stood strong and told him that I'm trying to
+get away from webs.  but how are we representing entities internally?  that's
+a good question.  I think in Crevace I had a whole entity structure setup.
+w/ animframe_t for animations and to keep track of the bmps.  so you could
+just put a linked list w/ a global handle of all available entities somewhere.
+
+the other questions that I have at this point are... do I use SDL?  I'm 
+definitely doing windows right now.  but I want to keep the code modular
+enough that I can slap unix replacements in for the windows stuff.  so
+that means that I need to modularize it some more.  for instance, in 
+gameboard.c I use windows only function calls to get the file-size, whereas
+on unix it would be w/ <unistd.h> & fstat.  so that goes into i_system.c.
+and perhaps some of the things in common.c go into i_system as well.  and I
+should do this now before I add a bunch more code and it becomes more 
+convoluted.  
+
+and I think the answer to SDL is yes, go ahead and use it.  use everything.
+do X11 AND DX5/DirectDraw AND OpenGL AND SDL. 
+
+There are just so many choices.  Here are the possible renderer backend
+implementation choices (notice I said 'backend' where a sizeable part of the
+renderer should be abstractable from the __backend__.  So perhaps I need a 
+design document that just deals in abstractions and math.  then the 
+implementation is just that, an implementation, nothing more.
+
+Duff's Device: Ps, yesterday I read some random code : malloc.c from 
+glibc-1.2.5 and they detected memcpy if _HAVE_MEMCOPY isnt defined then they
+write their own using Duff's Device.  Duffs device is sort of legendary I
+take it.  and sure looks fricking cool as hell.  so I need to use Duff's
+Device.  then I read up on the history of it.  its in stroustrops book, has
+a wikipedia page, and appeared on usenet back in the 80's , written in 1983
+by John Duff who was working for LucasFilm at the time.  he was profiling 
+some animation code and found a bottleneck was the loop condition around the
+screen blit, so he unrolled the loop, and put it in this switch.  heh.
+
+possible renderer backends:
+* SDL
+* DirectX
+* X11-SHM
+* X11-DGI (?)
+* SDL OPENGL
+* Win32 OpenGL
+* GLX OpenGL
+
+Ok, so the first and biggest question simply is, am I using OpenGL or not?
+better yet, can I write the renderer without worrying about if its opengl
+or not.  
+benefits of opengl: 
+- blending, 
+- alpha-channel transparency
+- possible use of 3D, 
+- getting closer to 3D coding, 
+- learning more about opengl in the process, 
+- overall slick look.
+downsides to opengl:
+- have to use alphachannel scheme for sprite blitting on top of map surface.
+- 
+
+positives of using 2D buffer:
+- blitting straight forward.
+- I did it before and it worked good then.
+
+ehhh, I just thought of something:  the alpha-channel thing in OpenGL, well,
+I had been wondering how to create properly alpha-masked sprites and I just
+realized that doing it in software wouldn't be that hard at all.  you load
+in the 24bpp images, run a test on them, detecting the area of pure black or
+pure white around the outside, and construct a 1byteperpix array with either
+alpha of 1.0 or 0 (i cant remember) and then write out a 4bpp resultant
+interleaved data image.  piece of cake.  
+
+OK, I've decided.  it must be opengl, because as I get more comfortable with
+it, I'd like to do some 3D.  but first things first, pacman.  where to start?
+
+X pull win32 calls out of gamecode, put them in i_system.  make win32 folder,
+  put everything with a windows specific call in there (opengl, input, sound)
+X create an input ring-buffer for keystrokes and polling loop.
+* use timers, write a main game loop that only calls drawscreen once every FPS
+* unified entity code, player code
+* intermediate renderer code that contructs a square list w/ texture data
+  pointer & x,y,z location for everything in that frame.  abstract coordinate
+  system.  (generates something that you could hand to a 2D renderer, or
+  3D, win or X11)
+
+* renderer backend routine that takes the prepared list, turns it into a 
+  vertex array or display list and feeds it to opengl as fast as possible.
+
+--
+I need to have a string.h section of my own implementations, which detects
+if HAVE_STRICMP || HAVE_STRCASECMP then #define C_stricmp(x, y) stricmp(x, y)
+that sort of thing.  use the system libraries if they are detected.  
+otherwise use my own.  (that's pretty advanced stuff)
+
+**
+I might be missing something, but I'm thinking that i_system.c/h should
+be a system abstraction layer that lives in the local folder, and that
+win32\win_global should be the only header included for use of the win32
+api, and that i_system.h should be cross-platform, but that i_system.c
+should use #ifdefs to include the win32\win_global.h which satisfy the 
+i_system.h calls.  this way, I can write another i_system for linux.
+or just use ifdefs and put linux calls also in i_system only.  and everything
+in win32 doesn't change a bit, and everything in the local code doesn't
+change a bit.
+
+I'm gonna try it.
+
+--
+I'm long past the above.  I've added the mainloop.  and gameticker and 
+menu-ticker and player ticker and gamestate switch, and even a stub
+for the renderer.  so just about everything is there as a skeleton.  its
+all lincoln log style construction.  because none of it has much for guts
+just enough to suggest what its function might be.  
+
+although just about I'd expect the whole game is there in stub-only form.
+this is good for coding.  now I can just fill in the stubs one at a time.
+There'll be much more.  I'll need fonts and font handling.  probably just
+attempt to blit them, which  reminds me, I'll need image handlng facilities.
+
+* image handling tga & bmp
+  - need funcs to create alpha channel 4bpp arrays from the raw data
+* font handling
+* animframe_t & animation functions 
+* base collision detection
+  - walls
+  - other entities
+* monster / badguy / entity stuff.
+  - random movement (just to get started)
+  - A* pathfind for the ghosts (coupled w/ some random for flavor)
+* renderer stuff for:
+  - rendering the background
+  - over-blitting the sprites & fonts
+* Menu & intro screen
+* death animations - fizzling deaths, dieing ghosts
+* simple sounds 
+
+-------------------
+
+Fuck'n'A - 
+
+Today was the Day.  I took a gamble, but I'd say it paid off.  I skipped out
+on going to chicago to see a concert.  the thing is, I dont have any money
+anyway.  nada, nothing.  I'm fucked, proper-fucked.  and just in the nick of 
+time, well almost 15 hours today.  I coded for almost 15 hours today, 
+straight. I ate, and washed a couple dishes, but that's it.  anyway, I 
+skulked through Setting up an OPENGL context which took most of the day.
+but eventually I got it, then I spent the last few hours running it through
+a compile and fixing the myriad of things wrong with it.  and guess what,
+11:35pm on my first beer, I got it.   FUCK YEAH!!  Man, if it displayed 
+something, I could say I wrote a big league game in a week, alas, there's
+not a drop of display code.  its all framework.  its basically a big-league
+opengl context on windows, and a mapreader, couple with some skeleton code
+and some library functions.  well, then again.  I've got 70% of a memory
+allocator.  I've written my own stdlib replacements.  the pinnacle of today,
+proving it a good code day, I wrote C_strncasecmp in RECORD TIME, and only
+had to fix one MINOR BUG, and it just works.  so that's some crazy shit
+right there.  usually I can barely wipe my nose, much less code.  today, its
+so easy its like walking.  
+
+I'm afraid to actually run the executable though.  now that it does compile,
+I want to trace through it all again, write a pussy renderer and some ok
+movement code.  Then I'll run it.
+
+since its been 15 hours, I'm done.  bring on the beers.  
+
+so now, looking above I see next:
+* just draw anything to the screen
+* get q & ESC keys to exit succesfully
+* a base renderer that renders the map 
+* basic movement code
+* collision detection
+* basic bound-boxes for the main character, ghosts, fruit and dots
+* dial in the input code
+* A* pathfind ghost code
+* interact with dots, ghosts
+* add fonts, score panels, keep score tally
+* start the sound code
+* add Gamestate switching, intro -> loselife -> complete level, etc..
+
+-----
+4500 lines.  so far.  I definitely feel as if I've done something today.
+and still it does nothing.  I may be less than halfway there.  buts its
+something.  it has to be.  it'll be hard to know if ever it is good enough.
+
+--------
+several days later - tuesday (that last was saturday).  Everything works
+now.  I worked out those kinks, now I actually have a framework for an 
+engine sort of.  now its opengl time.  first order of business, last night
+was dividing up a 640x480 into different measurements and came up with 
+these: 
+
+476 / 34 == 14  
+616 / 44 == 14
+
+leftpad = 5
+rightpad = 5
+toppad = 2
+bottompad = 2
+
+this is a starting point for drawing the gameboard and everything else.
+we are going to have a matrix of 45x34 squares, which will be positioned
+within the 640x480 area according to the pad values.  even then my current
+map is define for 40x31, so I have a few extra squares on either side to 
+work with.
+
+It appears that the first thing that I have to do is to put a routine in
+renderer that turns the gameboard into an openGL vertex array.
+
+I need simple way to abstract the game board like calling the lower-left
+corner 0,0.  when it actually has coordinates 7,1 the way I wrote it in my
+pacman.map.  anyway.  
+
+:::: NOTES from Blender OpenGL lecture ::::
+* never use immediate mode
+* Vertex Arrays are good
+* Interleaved Vertex Arrays of vertex & color data is better.
+* Vertex Buffer Objects - newer, faster, slow to read and write to memory
+                          but super fast when you draw with it.
+* Display Lists - even faster way.  static state.  always use Just Record.
+                  then execute once you've recorded.  have to re-create
+                  display list if the data in them changes.   include the 
+                  begin/end commands in the list.
+
+Perhaps my math is incomplete.  well, I could code this thing up to support
+many different sizes of squares, but right now, the very first thing to do
+is to just get something to the screen that you can interact with.  so we'll
+come back to that.  if the numbers that I determined above become problematic
+we'll just have to scrap it and start over AGAIN.  as it is now, those number
+leave enough space for traditional pacman with some padding.
+
+So we:
+A - pick an exact X,Y pixel to start the lower-left corner of the gameboard.
+B - construct a Vertex Array extrapolating off that pixel.
+C - interleave square color data with vertex data based on what type of
+	map object we have.  eg. wall, open or nothing.
+D - Compile who map into Display List
+E - contruct Pacman & Dots as RGBA byte arrays w/ Alpha Masks.
+<<<<<steps A, B, C, D, E can be done before rendering loop begins>>>>>
+F - for the Renderer Loop:
+    - write the display list of the map. 
+    - do an immediate mode draw of the quads with the dots
+      - could experiment with using a Vertex Buffer Object for the Dots.
+        that is, load all of the dots as a VBO , and as you eat them just
+        quit drawing the eaten ones.
+    - do an immediate mode draw of pacman over that
+    - same with ghosts, fruit, etc.
+
+A-D revised: find x,y of lower-left corner pixel.  create a display
+    list by looping through gameboard. 
+E revised: just draw some pixels to the screen of a small 14x14 circle.
+
+DONE: speed it up later.
+
+------------------------------
+A-E done.  it looks like , well, almost like shit.  I'm going to end up
+doing that silly byte buffer curved corners again.  perhaps write code to
+turn the byte arrays into Runtime lenth encoded bitfields.  then you could
+store the entire 16x16 thing in about 32 bytes instead of 300.  that's 
+pretty .. er, impressive.  
+
+the thing that is quite disturbing to me now is performance.  the whole 
+input part of the code just sucks.  the guy barely moves at all.  its
+really bad.  so I ahve a couple options.  mostly I just need to see what's
+going on in there.  why isnt it working.  which part of it is slow.  so
+I need to write a main program logging function just like the one in the
+windows code.  and write a bunch of messages to the log that tell how long
+it is taking to do various things.
+
+* Write a logging function
+* put lots of timers in the code and write out how long it takes to:
+  - draw one frame
+  - how many times in P_Ticker per-second
+  - achieved/actual FPS
+  
+we must be losing commands somewhere.  or perhaps its just different than
+what I had before.
+
+So fix that.  then do curved corners.  I could write a little separate 
+utility that, well, I create 16x16 curved corners, then turn them into
+uint arrays of bits.  then write those to stdout.  then I copy+paste them
+into the main prog and write a parsing routine for them.
+
+* Curved Corners
+* utility to turn byte arrays into uint bit-field arrays.
+* it might be better to do 6-8 versions of the pacman head as display lists, 
+and then use GL to rotate and translate it.
+
+--
+so today, good code mood. already working steadily.  I'm going to re-do the
+blocky walls, instead replace them with curved-corner bytesprites.  and 
+then write a generic set of routines to deal with them, compile display
+lists, generate uint RLE bit arrays to stdout.  so re-do the walls.  I've
+already written the byte arrays, changed pacdude.h to bytesprite.h.  its
+just something that I keep doing.  I enjoy bit-twiddling my own bytesprites,
+so I need to leave myself a set of generalized routines to do this.  data
+types, functions, and then infos.  so I should move the infos to another
+file, keep the data-structures and routines together.   bytesprite.c/h 
+& spritedata.h
+
+----
+long day. wayy to0 much work skipping going on here.  have a basic pacman
+demo working.  guess you could call it a proof of concept or alpha now because
+there is a guy that moves, doesnt go through walls and there are walls with
+rounded corners.  that's it.  still, it looks alright.  what do I need yet?
+
+I Need:
+* Fine Tune Movement
+* Working Teleports
+  * just working base case
+  * working with animation
+* Dots
+  * dots drawing in opengl
+* Collision detection to eat the Dots
+* Fonts to display the score.
+
+* Ghosts
+  * random movement first
+  * Then path-find semi-intelligence
+
+---------------
+December 15th: day after massive multi-day coding binge.
+state of game: right now is subversion version #99.  It runs flawlessly,
+draws dots, eats dots, teleports, and the movement is gorgeous.
+TODO BRAINSTORM: 
+- Defaults code to gameboard reader.  llcorner, height, width, lshift, rshift,
+  color (Make sure that all of these get assigned a sane value.  also do 
+  parameter checking, such that height must be <= MAX_Y, etc...
+- Make Pacman dude slightly bigger
+- get current date all-purpose func.
+- break out the bytesprite OpenGL draw abstraction into its own function.
+  - make pacdude & all tiles blit that way.
+- Add targa loading routine ( i already have in tgaviewer ).
+- ghost code:: ghost initialization & ghost spawn, ghost display, 
+  (for each entity, if entity[i].type = ET_GHOST), ghost ticker, ghost AI, 
+- entity collision detection handling.
+- BIGDOT superpower mode (ghosts turn color, ...)
+- all-purpose timed "character pause" on colision (death, rebirth, ...) 2000ms
+- research and implement Fonts. 
+- Real Windows Icon for executable and window
+- add animation capability for sprites (I already have in crevace).
+  - Ghost eyes face direction they're moving.  pacman mouth.
+- linux port backend
+- Fullscreen.
+- Escape Menu w/ options (Developer mode, resolutions, display driver, 
+  sound on/off, ..., start new game, quit)
+- work on virtual memory handler.  
+  - I was thinking about this.  You can move memory around because 
+    the use own their memory address once you've handed it to them.  If
+  there are two or more adjacent free blocks, you can consolidate them into
+  one big free one.  Also, if you request 2MB and there is only 1MB left,
+  the handler could also request more from the OS.  so the handler should
+  be coded to maintain multiple virtual regions.
+- Add Gamestate logic - intro screen, start level, player lives, death,
+  - which level comes in which order.
+  - scriptable levels, read-in level description script, tells which
+  maps come in which order, ghost difficulty on each level...
+- add 'r' key which reloads current gameboard w/o restarting game for dev.
+  - add routine which frees an entire gameboard safely.
+- compile gameboard into array of vertices & texture handles so we dont
+  have to call agency functions every draw...? (maybe not, I could have
+  walls that change, move, disappear, and this code appears to be fairly
+  fast) so, add an array to do this, and then you only have to check for
+  adjacent blocks when you want to.
+- SOUND!!!!.  Sounds, mixer, ...?
+- Game Pause (player initiated & if window not in front)
+
+man, all of this and I haven't even touched sound.  I have enough of a game 
+to start doing sound now.  I have dots, you can eat em.  but man, there's   
+so much that I dont know.  well, 3 weeks ago I didn't know windows.  you 
+just have to start doing sound.  that's all there is to it.  
+
+I can do a modernized Ultima in the sense that I want to do the same game,
+but I would never make mine that stupid looking.  better sprits, openGL,
+sweet animations, realtime FPS mazes.
+
+* 2nd game: Tetris, generalized with different block shapes.  not polished
+just simple & playable, for experimentation.
+* 3rd Game: Curses of the Undead -- looks like.  top-down, mazes, cities,
+subway, zombies, rednecks, george bush jokes, top-down boat mode.
+* 4th game: Adventure w/ original character w/ jungle and space-station
+    scenarios, top-down 2D, animated, nethack inspired but w/ more action,
+    robotron, secret doors, adventure, metal gear, a plot element, metroid,
+    bosses, perhaps different render views, side/platform?
+* 5th Game: goto 3D -- ??
+* nth game: tasteful 3D spacegame, original IP, AAA.  Privateer, Millenium
+    Falcon, starflight (surface exploration, large starmap, local starmap,
+    sweet battle system, no jump gates, traders, pirates, feds, aliens, 
+    based on my Destination Alpha storyline.  The first very fast space 
+    engine technology is invented.  throw in Snowfat ideas, corrupt politicians
+    are selling the earth to the Kraulons.
+(of course until I do it, these could all change.  This mostly reflects how
+I feel now.)
+-----
+
+The Renderer has 44x34, but the gameboard has 40x31.  So it is a stringent
+global definition.  I cant really explain it, but it sort of bothers me.
+Why?  because MAX_X is used to compute so many things in the code.  we dont
+have to deal with it until after pacman.
+
+------------------ ------------------ ------------------ ------------------
+OK, here is the current bug, and it is a serious one in that it completely
+destroys the game on some systems.  its a timer problem where the game runs
+out of control fast.  NOw, this seems fairly simple to me, except that I
+cant re-produce it.  FUCK FUCK FUCK, how the fuck do I reproduce it????  I
+dont fucking know.  and the thing is, I would like to send this as part of
+a resume to humanhead and probably 10 other studios like any fucking minute
+here.  god FUCKING Dammit!  so anyway, Fixing scenarios:
+1 - I Get a computer that the problem happens on, install the dev env, and
+    compile and test it on there til its fixed.
+2 - I run more tests with the windows timer function to make sure that every
+    thing in it makes sense.
+3 - Re-read all the code to make sure that IT makes sense.
+------------------ ------------------ ------------------ ------------------
+
+20070125 - I added fonts finally.  I can select which font I want to use and
+load a whole bunch of them via the FreeType library.  pretty sweet.  I am
+torn at this stage between pacman and being creative and doing an original 
+game.  
+
+--- Here's a funny idea, for the retro remakes competition in 2007 do a game
+called Hobo_Ron_2084.  so instead of RObotron, it'd be Hobo Ron.  Hah
+---------------------------------------
+BUGLIST:
+X- movement bug where you stop along the middle of a wall.
+X- counting glitch when ghosts are "chased", they re-appear before the chased
+    period is over, and thus reduce the count and the score by one.
+- When you go to gobble 2 ghosts which are right next to one-another, both
+    are gobbled at the same time, and the number overlap.  Instead there 
+    should be some sort of pause between them .
+X- the pauses caused by eating ghosts should be added into the total time of
+    the chased mode lasting.
+- glitchy jumps in the ghost movement.
+- poor, non-existant ghost pathfind behavior.
+- Sketchy, map square only collision detection, needs to be improved/altered
+    to be per-pixel style collision detection
+- ghosts get stuck in middle, close middle off to them except when they spawn
+    of course a pathfind would fix this as well. (make a one-way only wall
+    that points outwards around the middle, that way the ghost can make a 
+    pathfind that leads out, but aren't allow to make a pathfind that goes in.
+---------------------------------------
+- no sound
+- No intro sequence, 
+- no intermission sequence
+- Go through Log, and read all the warnings, fix as many as you can.
+- Pacman doesn't have animated mouth
+- ghosts aren't animated
+- eyes dont use pathfind to go back to middle.
+- Dont have a screen to enter initials.
+- Fullscreen Mode
+- More Maps
+- scripted Map cycle
+------------------------------------------------
+
+:: FIXES ::
+- Fixed player movement bug.
+
+===============================================================
+accidentally erased log text.  Shit, I was trying to fix a bug that I 
+introduced yesterday, and I wrote a bunch of useful brainstorm shit into
+the log and accidentally erased that.  shitters.  well here is what I can
+remember as important major points:
+
+-- 2D games that I am goinng to do.  One major 2D, top-down maze wanderer,
+exploration game.  and one platform game in the spirit of Metroid & Pitfall.
+Wizards & Warriors, (and Final Fantasy-like game), and Metal Gear.
+-- Major video game concepts to work out that I have not figured out yet.
+
+* how to pop a menu over a background of the paused game.
+* how to pop a menu over a background of moving gameplay, playing a demo.
+* how to capture a demo
+* how to playback a demo
+* how to do a screen capture at any given moment.
+* I need a menu system that is versatile and can be used as a multi-purpose,
+    in-game menu system like Defcon or liek Romero's in old Dangerous Dave
+* How to pause the game
+* you could put a developer Mode setting in the menu (or passed in by cmdline
+    param which enables goofy keys useful only to the developer, such as
+    re-load map, or god-mode.
+
+That's about it.  the menu and demo concepts are important tho.  gonna commit
+this puppy.  The only really important thing that I think that I am missing
+is that I was thnking about remakes to do for tie retro remakes game 
+competition.  I could do a retro remake of pitfall or the ID Stealth Fighter,
+release the demo w/ 3 levels as shareware and submit it to the contest.
+I have about 6+ months to do it.
+
+:: FIXES ::
+- fixed counting glitch
+- fixed chased ghost timerr inacurraccy.
+
+-------------------------
+XMORE THINGS TO CHANGE:
+X- each ghost needs to store: 
+X    - spawn coordinates
+X    - re-spawn coordinates
+-------------------------
+
+==========================================================
+Man, I'm in wayy deap now.  I've started attempting to implement a pathfind
+algorithm and without really knowing what I'm doing, I just started writing
+it using linked lists.  and I'm also using function pointers. Lots and lots
+of function pointers.  and actually, it should make it fairly tidy.  This'll
+end up looking like one of those C++ things where there's tons and tons of
+shit in thhe implementation, but the main algorithm looks real neat and tidy.
+
+if I ever get the game code working, I had a brief sort of glimpse from
+playing a nicely fleshed out ID game (doom) that you must spend a good 
+chunk of time dreaming things up and drawing them.  trying to flesh out a
+world to exist in.  I need to shoot for that as the "next" stage.  the 
+content stage.  so there's a big push on to get the code to work.  
+unfortunately, I still have a lot to do.  a graphics engine, probably a 
+couple re-writes there at least.  The sound system is non-existant.  Tile-
+based graphics.  Collision Detection.  a gui system.  Net code would be nice.
+multi-player (2 player coop) support.  multiple weapons and weapon behaviors,
+multiple bad guys, AI.  Shit, I have my work cut out for me.  
+
+Question:  at what point do I stop working on Pacman and begin the next game?
+
+sound. multiple maps (3, I'd say), pathfind mixed-with very good AI.
+
+********************************************************************
+To to do menus.  I want to program a console.  the whole thing, like carmack.
+But also because I love the console, Vi, bash, cat, grep, so I would get to
+write some of those but to my exacting specifications.  and not too cluttered.
+very clean and minimal like nanotiny.  or some pre-vim vi's.  (elvis perhaps?)
+-----------
+see log entry #174.  There's a lot of stuff in there.  And the biggy that I
+forgot ... COLLISION DETECTION.  That one is huge.   I didn't put sound in 
+there but I didn't forget it either.  Sound is a big one, deserving a log all
+its own I expect.  Same with net code.
+
+* I just had a thought.  Perhaps that error is to do with msvc.dll not being
+the same one that it was compiled against...!!!!  In both cases it was an
+executable that was compiled on another system, and then moved to that system.
+so there is probably some things fundamental to compiling a project for a 
+new platform that I do not yet understand.
+-----
+Today I tried this on my dad's freshly installed core2duo laptop, and guess
+what, it didn't work.  but I have given the executable to josh & shawn & adam
+and it worked just fine on their machines.  but it is definitely something
+to do with a different environment and that points directly to the dlls.  
+-----------------------------------------------
+* Figure out linking, static and dynamic in windows.  Which libraries,
+    where are they located, is this why its not working in when I play
+    pacman on another computer that its not compiled on?
+    Try staticly linking everything into the executable.  How does that
+    affect the size/speed?  alternatively, grab the dlls and place them
+    in the project folder and compile directly against those (GTKRadiant)
+    comes to mind.  Take a look at theirmake file or VS project file.
+* Fix the speed bug.  This is the major next issue to tackle.  Because I
+    do have a playable game now that could be enjoyed.  but if it doesn't
+    work because its spedup out of control, then its unplayable.
+* Add the Initials entering screen.  This would also add immensely the 
+    enjoyability/playability if it were in there right now.
+* Fullscreen would add to the game right away.  
+* Menus would add to the game right away
+* Get the pathfind to work and then start dialing in the thinker algorithm
+    so that it can actually use the generated path, but in interesting and
+    slightly random ways, the goal is to make the ghosts appear to think.
+    better yet, each ghost has a slightly different ..style.. as it were.
+    so you'd have a switch based on ghost color.
+---------------------------------------------------
+So, goal for Thursday, the top two on the above list.  I'll setup denny's
+machine side by side here, and read up on linking and see if I can come up
+with something.
+----------------------------------------------------------
+well, I consider the top-two finished and it only took me less than an hour.
+I changed one stupid #define variable and now its all better.  Here are the
+the things that I think that I should do next:
+
+- enter initials screen (w/ 20 second timer)
+- new map
+- free guys 
+
+::GHOST POINT BUG
+Also, there is a slight bug still in the chased ghost points counting 
+mechanism.  To reproduce it you need to eat a powerup, eat a few ghost, 
+eat another power up before that one ends, eat a few more ghost, eat another
+power up and so on, and by doing this, the counter doesn't get reset and
+you can still get doubles past 1600, I got 3200 I'm sure of it.  So this
+will need to be fixed eventually.  I think that you need to change 
+ghost->chased from a boolean to an int, and then increment the int with
+each powerup so that you can keep track of which one you are on.  also it
+would be simple to just add a check to never give 1600, better yet, just
+keep track of the points getting added out each time, if you get 1600 and
+chased is still on, then just start over at 800 again.  
+
+::LOSELIFE
+Also, it would be nice if when you lost a guy, that the guy had a splat
+animation or vanish animation that took a couple seconds so that you knew
+where you were at. as it is now, the guy vanishes so quickly that if you
+are playing the game and then get eaten by a ghost, you look down, but the
+guy is already gone.  so if You could just delay that by 2 seconds, that
+would be good.  an animation even better.
+
+::GAMESTATE::
+I dont seem to have fully versatile gamestate switching code yet.  Its all
+over the place and sort of ad-hoc.  it'd be nice to have something that's
+streamlined and well thought out so that I could just smash on and write
+a gazillion gamestate transitions always knowing where to throw the new 
+stub if I decide to add another.
+
+--------------------------------------------
+* when I load the map I want to print the name of the map loaded in the
+debug output
+* I'm not sure now how to load a second gameboard during play
+* a reload button 'r' to be used during map development would be nice too.
+    which re-reads the .map file.
+
+* all of this stuff pre-supposes that V_free works correctly so that I 
+    could potentially free the memory, and ask for it again.  well actually
+    I could just allocate the maximum gameboard squares in the beginning,
+    and then just re-write over that memory for each gameboard load.  no
+    muss, no fuss.
+-----------------------------------------------------------
+C++ Schedule.  I am going to finish pacman in C now.  I'm at least 50% of 
+the way, and it would be a fairly large task at this point to go into the
+code and edit it all to make it fit as C++ (or maybe you could just put 
+extern "C" { brackets around the whole thing?  Yeah, that might work.  
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* c code */
+
+#ifdef __cplusplus
+ }
+#endif
+
+but first I am going to re-write the memory code.  But if the Doom3 idlib 
+from the SDK looks tantalizing enough I might have to move to C++.  We'll 
+see.  
+
+When I start the next game (probably pretty soon, next couple of months,
+lets shoot for April), We'll start it as a C++ project.  The reason that
+I shouldn't even bother until then is because there is pretty huge overhead
+to learning C++ idioms.  Meaning it might take me a while just on the
+adjustment.
+---------------------------------------------------------------------
+Digression:
+    I start fired up Doom3 to get my mind off of Josh and its a very
+wierd experience.  Some parts of it are downright amazing.  Mostly on the
+visual side.  The character/monster animations, in conjunction with your
+ability to interact with them in frightenly real time.  That I find 
+completely amazing.  
+
+random:
+* I wish there were MUCH more NPC AI.  They just got the basics there, but
+    it needs more.  Like the ability for NPCs to detect your proximity and
+    detect if you are looking at them.  and then a big decision tree of things
+    to say to you, suchas: "Hey, look at me when I'm speaking to you."  "Hey,
+    where are you going, I'm over here"
+* The ability to speak back to the NPCs to influence outcomes.
+* the game takes itself way too seriously.  A sense of humor proves itself
+    vastly superior once again.  as well as embracing the technology for what
+    it is.  Dooms maps have been referred to as surreal, which is what they
+    are.  the Original Doom never aspired to be real, or anything other than
+    just fun and to use the technology to its fullest extent puzzles and 
+    challenges.
+* they should have a karma rating based on how many NPCs you kill
+* PDAs suck.  I'm not sure why.
+* the reason that people hate the multiplayer aspect probably isn't 
+    a networking issue (especially based on what ttimo said about how
+    id thinks that its the right design moving forward). 
+* the reason that the multiplayer stinks is because of how stodgy, kludgy
+    and sluggish the character moves.  Its very slow, and thick and feels
+    heavy.  FEAR is like that as well.  but HL2 and BF2 dont feel that way, 
+    or Oblivion.  and old quake1,2,3 are fast as hell by comparison.
+* there should be more ambient light or the ability to not have to be so 
+    dependant on the per-pixel lighting system.
+* its possible that C++ is what made the game suck, but I won't know until I
+    try to write a game in C++.  
+* You also get the sense that the guys who made this game are not gamers.  
+    that none of them really represent the true "gamer spirit" of wacky
+    irreverance like Romero did.  It feels like it was made by PR guys like
+    Kevin Cloud.
+* The object animations like the all the valves and machinery are nothing 
+    short of breathtakingly amazing.
+* having only ONE WAY TO GO in any game is a zero-sum proposition.  It changes
+    it from being an active experience to a passive one, and negates its 
+    status as even being a game as far as I'm concerned.  Its more like a 
+    tech demo.
+--------------------------------------------------------------------------
+OPENGL:
+* I have alot to learn about OpenGL.  It is occurring to me now that I need
+to find an __in__.  something that makes sense to me, and addresses opengl
+at about my level and then can throw me in to the deeper concepts.  I still
+feel like I am stumbling around when I program in it.  its because it is a
+state machine, because it is opaque and a vaguely defined.  There are all
+these hidden side-effects.  
+* Read Code
+* grep through q3 for all the qgl* functions, see where they are used, how
+they are used, etc..
+* Look at purchasing the opengl bible, other highly reccomended books?
+------------------------------------------------------
+OTHER FIXES TODO:
+
+* Make Ghosts go through teleports
+* Make ghosts flash white & purple right at the end of _chased_
+* In chased ghosts get eaten, they fly back to the box and then they wait
+    until chased is over to emmerge.  My ghosts just wait on a timer.  I
+    could have them wait on a timer unless chased is longer, then have them
+    wait until chased is over.  so that all the ghosts are gone until the
+    end of chased, and eating a second big-dot during chased only extens the
+    time limit of the ghosts that still haven't been eaten.  So this way you
+    will never be able to get over 1600, because once all the ghosts are 
+    eaten chased does nothing except suppress the ghosts from emmerging.
+
+------------------------------------------------------------------------
+::Progress Report::
+Feb 4th, I estimate 25 days spent coding pacman so far.  
+that's the bad news.  The good news is that I believe that it is unbelievably
+fast.  It is very very fast.  I know this because the whole loading a 
+new gameboard thing happens instantaneously and that's a long code path 
+relative to some.  I am beginning to introduce regression bugs.  fixing 
+somethings but new wierder bugs pop up in their place, like a wackamole.
+-------------------------------------------------------------------------
+First Alpha target release:
+In order to get to first alpha release I could do the following:
+X- make a 'data' folder.  inside that make a 'maps' folder.
+X- move the maps to the data/maps folder.
+X- move img to data/img
+X- move fonts to data/font
+X- change the linker path to base/contrib(?) and put any dlls in there.
+- have a routine that checks for available maps on load; only spits a fatal
+    error if there are no maps.  else its follows a few preset map paths
+    using what it finds.
+X- Create a pixmap icon for the executable.
+X- get the gamecode to work.
+-------------------------------------------------------------------------
+- have Studier's kid, Jack test play it.
+--------------------------------------------------------------
+Feb 10th.  I have everything for the alpha release and I've play tested it
+some and its doing good.  the game code has been just oatmeal gobbledy gook.
+not easy to understand.  basically a re-write, but w/o proper design.  One
+design element that I seem to be coming up against over and over and over are
+global variables used for event tracking.  so one of the next things that
+I would like to do is to figure out/design a mechanism to keep track of these,
+so that hopefully they dont have to be global.  I could see how you could
+keep some sort of linked list of event structs, each containing a time began,
+duration and function pointer to run when called.
+
+typedef struct (its in event.h) well, I started writing it, but I cant really
+think it through.  I mean, I cant just run all the timed_events in a loop all
+at once.  they must be run at their right place in the code.  I'm trying to 
+think of a calling convention.  So you call, 
+R_PostNewGuy ()
+from another function.  along with this function goes a polling function.
+that is called from the main graphics routine.  You could tag any number of
+routines to the main graphics function by some calling convention.  in fact
+you could create the calls as needed.  
+
+So you write the static handler code for R_DrawGuys() //(or whatever).  
+and you hold a timer_t timerhead staticly in R_DrawGuys().
+
+So there can be multiple timer sets.  in this case there is one set for this
+one call in the graphics routine, where you add draw events to it. 
+
+so we need a convention to add a timed_event generically.  by passing,
+
+(int start;  int duration;  void **, int nump)  
+ // a pointer to a list of pointers to functions?
+
+/* hmm, I wonder what a pointer to an array of pointers to functions
+    would look like?  There is an array of function pointers in "expert C",
+    which is the same thing, except that you have to have the same argument
+    list and return value for pointers in an array */
+
+Hmm so lets start from the beginning:::  
+
+1 - We have a function   R_PostNewGuy ();  which is called from game.c.
+2 - We have a function   R_DrawGuys ();  which is called from within the
+    draw code.
+3 - the drawcode R_DrawGuys() needs to check if there are timed_events
+    and execute them if there are.
+
+E_CheckTimedEvents(&timed_event_head);
+
+simple as that.  so when R_PostNewGuy() is called it checks if 
+extra_life_posted or lose_life_posted are gtrue.  which alters its behavior
+is all.  so perhaps I need a hash lookup for structs containing bools
+and function pointers.  (carmack called them integer), 
+
+so you just call the hash with a string
+
+if (H_CheckHash("lose_life"))
+    // do special stuff
+
+gbool H_CheckHash (char *str)
+{
+    if hash str exists; check hash for truth val; if hash exists 
+        return truth val.  if hash doesnt exist, return false.
+}
+
+gbool H_ExeHash (char *str)
+{
+    if hash str exists, lookup associated struct and execute its funcptr
+        according to its internal details.
+    return true if found and executed;
+    return false if not found or found and execution returned badly;
+}
+
+gbool H_AddFuncHash (char *name, void *func, void *arg, void *arg, int num)
+{
+}
+
+gbool H_PollHash (char *str)
+    // just see if it exists
+
+gbool H_RemoveHash (char *str);
+
+////////////////////////////////////////////////////////////////
+the other thing that happens is that the beginning of every drawGuys
+routine the first thing it does is check the time of the timer and 
+turn it off if its exceeded its time.
+////////////////////////////////////////////////////////////////
+
+BUGS BUGS BUGS BUGS BUGS BUGS (small)
+Bugs:
+X- there is no pause when you win the game
+X    - it should pause on the last thing that happened that caused the
+X        gameover state.  then relinquish the pause for the enter initials
+X        screen or whatever.
+X- backspace does not work in enter score
+- pacman.exe is back to using 20-30% of cpu.  too much!!!
+X- if you get the same highscore but w/ different initials, the end screen
+X    can illuminate teh wrong highscore.  Definitely need a mechanism that
+X    stores the exact index of the new highscore for the drawing routine
+X    to use to make sure that everytime it is _right_.
+
+also, I guess, I just would like to mention in response to my idea to find
+a better solution to timed-event issues: The right solution is the best
+one.  There are going to be a million and one issues that make a game work.
+the right solution is all you need to worry about.  My game is working 
+fairly well.  the bugs mentioned above are things that might not even be
+noticed by most folks.  Just do it right.
+
+God I love coding.  If I had a good woman and a real job my life would be
+perfect, oh and a nice house near the ocean and two daughters and some land
+with firewood and trees and a sailboat and interesting friends.  Oh, and I
+didn't desire woman with smoldering eyes full of lust.
+
+
+----------------------------------------------------------
+:: ALPHA 2 ::  svn# 236
+Potential Alpha Testers:
+
+- Studier
+- Keith Miller          keith-miller@uiowa.edu
+- Gelo                  shawn-gelo@uiowa.edu
+- Jolene Braun          jo@jo-braun.com
+- Splugorth             adam-galvan@uiowa.edu
+- Crittendon
+- Hank
+- Shawn Clark           shawnedwardclark@gmail.com , 
+- James Adrian
+- Luke Naughton 
+
+----------------------------------------------------------------------
+effects.
+1) write function to get current screen to 640x480x3 buffer;
+2) write function to draw some pix buffer to screen in OpenGL;
+I am thinking specifically about re-creating the screen melting , dripping
+downwards to reveal the next screen in Doom.  In order to do that i would
+have to get the OGL rendered screen to pixbuf, manipulate that buf, and feed
+it back to GL.  The other trick would be somehow painting the screen that 
+it reveals above a certain line.  
+
+I was just going to sit down and do this, but now I release that its a bit
+more difficult than I had thought.  I'm still going to do it though.
+
+The Alpha is done.  I think its like v239 now.  I just keep adding little
+shreds of coolness.
+
+---------------------------------------------------
+Hey Mr. Bartender, How can you be so slow.  
+I got time for another and a sixpack to go.
+Tomorrow's sunday morning. I'll be feeling so low.
+Hey Mr. Bartender, how bout that sixpack to go
+---------------------------------------------------
+
+Shawn reports to me that in Vista it runs, but at about 1/5th the proper
+speed.  I think that before sending out this Beta release that I should 
+setup vanilla Vista & XP machines here.
+======================================================================
+:: implementation of C++ vectors in C ::
+::::::::::::::::::::::::::::::::::::::::
+typedef struct {
+	Float32 *v; /** Float 32, is just a 32 bit float, part of our lib,  
+same with Float16, Float64, Float80 and Float96. Note that only  
+Float32 and Float64 are standard in C other are proprietary of our  
+lib */
+	Uint8 d;
+} Vector32;
+
+/* Those things are our standard API for pseudo object programming in  
+C */
+Vector32_alloc(Vector32 **v) {
+	*v = malloc(sizeof(Vector32));
+}
+Vector32_init(Vector32 *v) {
+	v->d = 0;
+	v->v = NULL;
+}
+Vector32_setDimension(Vector32 *v, Uint8 d) {
+	if(!v || v->v) return;
+	v->d = d;
+	v->v = malloc(d * sizeof(Float32));
+}
+/* What is of some interest for you, maybe */
+Vector32_setData(Vector32 *v, ...) {
+	va_list l;
+	va_start(l, v);
+	char *p;
+	int i;
+	for(*p = v, i = 0; *p && i < v->d /* We also verify dimension, if  
+too much args are passed */; p++, i++) {
+		v->v[i] = va_arg(l, Float32);
+	}
+	va_end(l);
+}
+======================================================================
+I tried adding just about every dll, did nothing.  The only file that 
+wouldn't run on a vanilla Windows XP box pre-SP1 was the release compile
+from Visual Studio 2005.  It is the only one with the resource.ico.  
+All of the files w/o the icon work.  All versions coming off of nmake.exe
+and even the debug version from VS2005.  I'm not sure what it is.  I
+guess it would indicate that the resource is fucked up.  I wouldn't doubt
+it honestly.  I could try to redo it.  or learn to do it by hand.  I copied
+the command line that devenv.exe uses: its something like 
+"rc.exe xxx.res xxx.rc" where it takes the rc as input and generates the 
+res and then links the res into the final exe.   I dont know what the 
+syntax to do it in a makefile is.
+
+I added the rule to include the resource in the makefile, compiled it, 
+and it worked like a fucking charm.  copied it over to the pre-SP1 XP
+machine, and that also worked like a charm.  THe issue of speed that Shawn
+was having, I saw initially there too.  Its a OpenGL driver issue.  I read
+that when you dont have the manufacturers hardware driver installed windows
+has a software implementation of oppengl that it uses.  so the first time
+I played pacman, it worked, but in software it was about 1/5th or less the
+speed.  I kind of like the look/feel of software rendering.  oh well.  
+
+The other thing is speed issues.  pacman actually plays a good deal faster 
+on the athlon 1600+ than it does on this Dual-Core Intel 2.0Ghz w/ better
+GPU.  I dont get it.  
+
+so releases for the time being will be done with nmake.  
+------------------------------------------------------------------------
+So, here is the score.  There is a jerking in the movement of the regular
+pacman code.  In order to play correctly a decent hardware driver from the
+manufacturer seems to be necessary (not that it couldn't be done some otherr
+way in software that might be sufficient but I wrote it specifically for
+opengl the way I did).  On my laptop in 1440x900 it runs slowish and the
+movement jerks noticably.  but on a machine that has a 4/3 ratio screen 
+resolution like 800x600,1024x768,1600x1200 it runs fine.  It runs 
+unjerkily and at the right speed.  Fuck.  I guess that there are ways to
+make sure that it runs fine, which all depend on hardware and screen 
+resolution detection and then adjusting accordingly.  for instance, I still
+have a 10ms sleep in the main loop.  what would happen in 1440x900 if I 
+remove it?  I dont know.  I'll try.
+
+Ok, I recompiled version 243 without the gsleep(10) and it worked.  so my
+hypothesis was proven.  so then I recompile it and put it back in and it
+looked and played exactly the same.  the right speed and the jerkiness
+was not there.  so I dont exactly know where that is coming from.  a bad
+build I suppose, but not sure why.  hold on, Im going to make a release.
+and try that.
+----------------
+ok, here is what is happening.  ::::
+
+1 - I am compiling a nice version on this machine.
+2 - I am testing that version, everything a-ok.
+3 - I am uploading it to snowfat.org
+4 - I am downloading from snofat.org and opening it.
+5 - when I play it is slower and jerky.  
+
+hmmm.  this is a wierd problem.  I'm going to have to go live with the
+IRC or newsgroups or something.   I....?
+--- this could be like before.  I have noticed the slightly slower,
+jerky version.  and then all of the sudden without changing the code it
+plays slow and jerky, but sometimes not.
+
+I guess the first guess would be dlls.  hmm.   The first thing I need 
+to figure is how dlls work.  is it a deal where they always exist in the
+same directory or can the directory search be compiled in???  I just dont
+know that.  
+
+ok, the way to disprove this theory would be to add all those dlls:
+msvcrt* and see if it fixes the sluggish version.  fuckers.
+
+----
+well, as usual, forget it.  the dlls dont work.  though I cant figureit.
+spose I should try doing a 4/3 screen resolution real quick.
+------------------------
+This just came up on SDL list, "framerate independance":  <HUGE>
+
+Uint32 t1, t2;
+int fps = 100;
+int done=1;
+
+while (!done)
+{
+    t1 = SDL_GetTicks();  // Initial time
+
+    // do something... input, game logic, drawing, ...
+
+    do
+    {
+        t2 = SDL_GetTicks();  // Current time
+    } while ((t2 - t1) <= 1000/fps);
+}
+
+Another way is:
+
+Uint32 t1, t2, dt;
+
+while(!done)
+{
+   t1 = SDL_GetTicks();
+
+    // Do something...
+
+    t2 = SDL_GetTicks();
+
+   // delta time
+   dt = t2 - t1;
+
+    x = x + vx*dt       // Use dt to calculate new position...
+
+    // drawing...
+}
+Although delta time (dtime) is simple and convenient to implement, it 
+has many drawbacks:
+
+1) The game will behave differently each time it is run, thus making 
+debugging more difficult -- you will have problems reproducing the 
+execution of the game in exactly the same manner.
+
+2) If you have hiccups in the game while it is executing, the result 
+will be very obvious, as objects will jump further    than normal due to 
+the irregular gap in dtime.
+
+3) While debugging the game, if you interrupt execution, the game will 
+utilize the change in dtime when you resume execution of the program, 
+and the result will be very messy (dtime could be on the order of 30 
+seconds).
+
+The techniques described by David Olofson using a fixed game engine 
+counter and running the game at a fixed frequently, much like a CPU 
+clock, provide for an amazing performance.  It also allows you to stop 
+the game and run it one clock cycle at a time during debugging (quite cool!)
+
+Paul Lowe
+paul <at> tetravista.net
+
+It is much better to use SDL_Delay as mentioned on the usingtimers.html 
+
+http://www.libsdl.org/intro.en/usingtimers.html
+http://olofson.net/mixed.html, olofson is supposed to be the master.
+    see the timed pig example code.
+http://www.gaffer.org/game-physics/fix-your-timestep/
+------------------------------------------------------------------------
+The reason that went ahead and copy-pasted all this stuff (cp'd) is because
+timing still remains an issue in my mind.  I have the sense that I'm probably
+doing something wrong.  an infinite loop seems like a good idea in theory
+but it hammers the CPU.  which is worthless.   So perhaps haveing the process
+sleep and be scheduled or called at a certain rate by the kernel.  and then
+somehow be able to monitor its progress and be able to alter the periods 
+which it sleeps.  The idea being that it wont hog the cpu at all if it doesn't
+need to, but if it does it will go all the way to 100%
+------------------------------------------------------------------------
+:::::::::::::::::
+:: SOUND NEEDS ::
+:::::::::::::::::
+* 8 channel Mixer
+* Hashtable (converts string to void *) /* still not sure if I need yet */
+    a hash func could return a void * to a hash_t which is a struct which
+    contains a little info about what it contains.  the hash_t struct would
+    contain a void * to the actual data, but then meta data as to what type
+    of datatype the void * points to.  You could then pass the hash_t *
+    to H_GetDataType(void *) which returns the datatype enum.
+* Global Sound Event code.
+* S_AddEvent("bullet", int duration, int delay);
+    - from anywhere in the code , add a sound by soundname string, (must be 
+    unique) this registers the time entered, starts the sound after delay 
+    and plays the sound for duration milliseconds.  after the sound is 
+    finished it is removed from the list.
+* S_InitSounds() - takes a list of sounds, soundnames, filenames, 
+    computes durations, stores raw wave in heap, keeps meta-data in struct.
+    structs stored in doubly linked list with handle in soundfile BUT ALSO:
+    enters pointer to struct sound_s in hashtable based on hash of soundname.
+* S_PollSounds()
+    called via main loop.  This func looks to see which sounds are entered
+    in the play queue at any given time, which frame they are on, gets that
+    frame or set of frames, mixes them, and sends the result out to the PCM
+    device.
+* S_LevelMusic() 
+    starts songs depending on different queues from the game code, such as
+    start of a new level, or addition of a level trigger.
+
+* trigger.c - trigger code.  A list of triggers.  you can add them from
+    outside this code.  Triggers are like bookmarks to mark events.  They
+    can be timed, not timed, permanent, a player can trip a trigger by 
+    hitting a triggering map entity.  A trigger can be removed by another
+    trigger.
+
+-------------------------
+Here's a question: when do I start a new game?  How much more do I need to 
+get done in order to quit working on pacman?  
+
+* sound code
+* full screen
+* pathfind that works
+* trigger code
+* general usage hashtable (described in log)
+* animated sprites
+* a GUI system
+* control configuration file
+
+- Do I need a map editor? 
+- Do I need a suite of sound tools? 
+- Do I need an animation editor?
+
+1 - not important.  Text file seems to be good enough right now.
+2 - I would say that I could probably do a lot just using ardour & rosegarden.
+    and perhaps C-sound, or another software synth.  make songs, capture 
+    littl samples of various notes through wacked out filters, and then edit
+    the samples in a sound clip editor to the exact length, beginning and 
+    ending.  and then throw it into a folder and say "Next".
+    so the answer to #2 is that Yes, I do need some tools.  I need the 
+    ability to play back sounds in a variety of ways.  It needs to be fast.
+    It needs to support loops.   I need to be able to start and to stop 
+    loops with the push of a key.  I keep thinking that it would also be nice
+    to be able to bend the pitch of sounds in realtime.  something that is
+    mathematically beyond me, but I imagine that the info is out there in DSP
+    land, could FFTW -fastest fourier transform ...
+3 - Yes.  I would just say yes.  Perhaps an ingame deal that you can bring
+    up by typing ~, get a console, enter commands into the console. 'sounded',
+    'animed', ESC jumps out to intermediate menu.  "return to game yes/no?"
+    What would animed be?  opens up data/img , displays a huge list of static
+    tiles.  to start a new anim, you choose *start new from a menu.  you name 
+    it something, and you add frames to it from the list.  at any time you can
+    play the anim by typing 'space' or 'return'.  press 's' to save an anim.
+    which saves a meta-data file to data/anims.  These can then be loaded
+    by a game.conf file.  or specified in the map file by name.  
+
+::Routines::
+* in order for 3 to work, I will need a routine to resize a bitmap to a 
+    different size.  There must be some basic algorithms, math to do this.
+    perhaps just get some image magick code or gimp code or something.
+* I need a routine to take a screenshot from OpenGL.  some sort of access
+    to the pixel buffer, or OpenGL function call.  pass in pointer to large
+    byte buffer, it fills the buffer with the screen.
+* a routine to write a byte buffer to the screen.
+    
+***********************************************************************
+ A second question:  What would be better.  Just learning the entire quake3
+    code base.  modding it.  writing my own pieces to it.  OR writing my
+    own engine from scratch like I am doing?  The reason I ask is that 
+    sometimes I tend to do what is more comfortable, than what is right.
+
+-----------------------------------------------------------------------
+I guess I've been taking a week off.  I haven't really realized it until
+today.  the last modification to files in the make working copy was on the
+13th.  today is the 19th.  I will call that a week.  because I haven't gone
+back to it anyway.  I reached my alpha goal.  tested it across a few machines,
+including vista and it worked.  and I've been back to struggling with drinking.
+I think that I am going to be able to lick that now.  I am not strong I am
+realizing.  the petty things that I do and feel towards my peers are due to my
+lack of strength which breeds lack of confidence and lack of respect.  you
+cant respect another when you dont respect yourself.  You must first be full
+inside before it becomes easy to give to others.  I am rarely full inside.  
+usually I am operating under the facade that I am ok, but even I barely know
+the truth, which is that I am not.  anyway, if I quit booze, elevate my goals
+and excercise I should be ok.  I've done it before.  not only must one be 
+strong in this regard, but one must be resolute in their goals.  always aware
+of what you are doing and how it is affected by your next step.
+-----------------------------------------------------------------------------
+so this brings me to this code.  it has been slow going i fear.  a 18 yr old
+kid of slightly above average ability level and some SDL sample code could
+probably build a pacman like this over the weekend.  it took me over a month,
+perhaps my estimates are off, but it feels like too much.  too slow going.
+in order to be creative at all doing this stuff, you must get to a point
+where it is fast.  where shit just flows from you.  I cannot yet see that point,
+even in the far far distance becoming avaible to me.
+
+What I want:
+* To make a few great finished games.
+
+What I will need:
+* A few talented, special people who share my vision
+* Leadership ability
+* strength
+* Focus
+* A job for 1-2 years working around people of vastly higher ability level.
+* More discipline learning and executing programming maneuvers
+* to smoke more pot
+* work more late nights
+* To eliminate drinking entirely from my routine
+
+I am getting old. I'm almost 34.  I am a late comer to this videogame bullshit.
+What's worse, the games that inspired me, I dont see them now.  the type of
+people, the artistic type that made King's Quest and Wing Commander.  I dont
+see them.  I guess I look to Introversion slightly.  but they're really one
+guy who does all the code and then a bunch of punks living the lifestyle.  
+whereas ID was some sort of fluke based on supreme talent of the core few
+and fortuitous meetings.  
+
+There's no way.  but one thing seems right to me.  when they say, "You wanna
+do videogames?  Oh, well you should be learning pixel shaders and development
+on the xbox and shit."  I mean, I dont want to do pixel shaders.  not at all,
+not in the least bit.  well, maybe a little.  but much more than all that, I
+want to complete a little game.  the graphics dont have to be great, they just
+have to be good enough to convey the ideas that I feel.  Its all about the
+ideas.  In fact it astounds me how few ideas there are across the entire
+games industry that make ANY sense at all.  None.  These people are fucking
+retarded.  oh, and so is hollywood.  I mean, well, a guy with ideas could
+do well, if he could only get them across.  I'm certainly no ID, and I'm no
+Introversion.  so I've just gotta be me.  I spose I'm closest to Lord British
+in the type of stuff that I want to do.  I want to do Starflight 1, Privateer,
+Pitfall, Metroid, MetalGear.  those are the names that keep coming up.  but
+I dont actually want to do those games, I just know that whatever is in them,
+that is the thing that makes me feel the best out of ALL games.  better than
+all of the new games.  and I like some of the new games.  the fancy 3D engine
+games with 10000 textures and phong lighting and whatever.  but its overkill.
+how can a couple guys make ideas into finished games if they fuck with all
+that stuff?  In short, they cant and I guess that its my mission to prove
+that it can be done one more time.
+
+I feel dreadfully alone in all of this though.  I wish Victoria Arundel was 
+my girlfriend.  oh well.
+-----------------------------------------------------------------------------
+I never did finished my re-assessment.  I was too tired.  I am still tired 
+but have enough energy.  I guess I was spurned by the fact that I haven't
+coded in over a week.  I've been recouperating from Josh dieing and a short
+but dense drinking binge that ensued.  Health went down, alchohol and fuzzy 
+thinking went up.  I'm just now starting to get into the clear.  Code, I guess
+when you dont do it for a bit it seems like its impossible.  There, I said it.
+When you dont do it for a bit, it seems impossible.  But it isn't.  There is
+a good chunk of decent code in what I've written so far in my 11,000 lines of
+pacman.  Of course were I worth my weight (and in my early 20's), I could just
+scrap it, start over and keep going.  I guess I have to question my energy
+levels mostly.  It seems like I _could_, (stress _could_) learn most of these
+technologies and things that I have to learn in order to build a great game.
+and I am doing it somewhat.  basically I'm smart enough to learn most or all
+of this stuff, and that's what got me into it in the first place, I guess the
+promise of really _getting_ the cpu and memory at the lowest level so that I
+wasn't afraid to code just about anything and to code this stuff well.  not
+to mention write compilers, network code, I mean tackle the big stuff.  but
+what I'm learning is that there are steep steep learning curves for a lot of
+this, I still haven't attained my goal of real low-level understanding.  I
+dont have a real feel for what the processor is doing.  and coupled with the
+state of gaming now, the unreal3, super 3D engines with five-fucking-million
+features, water, HD, bumpmap textures, per-pixel lighting, pix & vert shaders,
+its just too much.
+
+The last thing I went to look at was "Fixed Logic Framerate" and sound code.
+feeling somewhat rundown (I still am), I turned to SDL for help.  Found 
+Olofson, went through "Fixed Rate Pig" over two times and then just collapsed
+mentally.  (I did play some nice BF2 tho ;-0)  o
+
+so I wanna return.  keep going.  keep looking towards my lofty goals.  do 
+something with myself.  but right now, right before I start again I have to 
+assess as best I can which way is best to go.  and should I change course from
+what I was doing?  What I was doing was working on 2D games.  kind of olden
+time resurrections.  I feel like I could make a fun enough low-res 2D game
+that the shit graphic level wouldn't matter so much.  Of course the first
+thing that people notice is how the game makes an initial impact on their 
+eyes (and ears).  I guess I can only be so proud of a pacman when pacman is
+clearly another game.  
+
+goals: 
+- move away from pacman as soon as possible
+- start working in 3D very soon (but not necessarily on a full game. demos?) 
+- get sound code working extremely soon
+- start designing features, storyline and gameplay of next game.  set goals.
+
+Ok, so here is my assessment.  If I set goals I _can_ do it.  If I design my
+own animated character sprites they _will_ turn out.  if I do my own music,
+it _will_ be awesome.  so DO IT.  Be an angry man about it, and fucking take
+care of business at all costs.  Take no prisoners!  Remember the fuckers who 
+are against you..  Everyone.  Manjoine, my parents, everyone.  Fucking 
+Assholes.
+
+***********************************************************************
+NEEDED TO FINISH PACMAN:
+***********************************************************************
+* Fixed Logic Framerate
+* sound code
+* Original Sounds / music
+* full screen
+* animated sprites
+* flashing ghosts towards end of 'chased' phase
+* pathfind that works (improved ghost behavior)
+* sub-pixel movement accuracy
+* Fruit
+* general usage hashtable (described in log)
+* simple GUI system
+* Automatic Map detection (reads dir, loads maps it finds)
+* 3 more original maps, green, purple, red
+***********************************************************************
+
+I think that stuff is reasonable.  I need to finish it better.  I read a
+1994 article about Doom yesterday and what struck me about it is how fucking
+matter of fact about their incredible technology these guys were even then.
+they're so fucking glib and high about themselves.  They never call code, 
+'code', they call it 'technology'.  You know what I need is a yardstick.  
+some way to really know what is out there.  then, if you had a solid yardstick,
+when you surpassed a certain level, and knew that there were only a 100 other
+designers at your level at least you would really know your true worth rather
+than falling into pits of self-doubt like I am now.
+
+perhaps I just learned too much at once, my brain shutdown.  I am really
+seeing the importance of using floating point coordinate systems as well as
+using 3D coordinate matrices even if the game is 2D.  so my next game will
+absolutely have a 3D or 4D coordinate system just for versatility and to get
+used to using them and doing Matrix math.  I have a Math for game-design pdf
+that showed how to use velocity, acceleration and movement computation using
+matrices, and it makes perfect sense.
+----------------------
+** Breakthrough
+I think that I finally grasp it.  I can't believe that it took me that long.
+Render code is completely separated from logic framerate.  You decide a nominal
+logic framerate, say 30Hz, or 100Hz or 20Hz, or whatever.  and then you write
+the code to suit the framerate.  Olofson has a if (gs->nice) Sleep(10); thing
+which I think could be improved.  Instead you could have a stats routine
+that tests the game (you could just print a graphic to the screen, 
+"Configuring...", but in the background you are actually blitting, etc..
+and then take the figures generated by the test, figures on framerates, and
+determine that if its a super fast computer to turn on Sleep(10);  you dont
+want to burn CPU for nothing.  on the other hand if its a super slow computer 
+turn off Sleep(10); completely.  also you could use a software blitter instead
+of OpenGL to improve the render speed quite a bit I bet.
+
+Anyway, next up in pacman, determine a fixed logic frame rate for pacman logic.
+The moves are now sub-pixel quite a bit, and x.nnnnn == x in the final render.
+or floor(x.nnnn) == x.  This will keep the gameplay hopefully steady across
+systems.  also, we'll introduce velocity and acceleration concepts.  also 
+float values.  so on a shitty render, no display driver system, the refresh
+will be bad, but the game speed will be _correct_ which is what I was after.
+
+prolly logic_fps == 20.0
+
+"The next stage is optional, but rather nice: Implement interpolation 
+of all coordinates extracted from the logic code. That is, if logic 
+time turns out to be halfway between two logic frames when it's time 
+to render, interpolate over the output from last two logic frames you 
+have, rather than just using the last one."
+
+In your collision detection routine, calculate the exact time a collision
+occurs, then you can interpolate _exact_ coordinates.
+
+"If you want physically more accurate results in a
+non-constant acceleration simulation, try Euler backward for example.
+This method has higher computational cost as you might have guessed."
+
+Keywords:  Euler Backward  &&  Euler Forward
+
+For changing Acceleration you can use Quadratic and Cubic interpolation.
+
+Kobo Deluxe logic_fps = 33Hz.  (which should be good for my purposes)
+
+----------------------------
+Quake 3's Solution:
+while ( 1 ) {
+		// if not running as a game client, sleep a bit
+		if ( g_wv.isMinimized || ( com_dedicated && com_dedicated->integer ) ) {
+			Sleep( 5 );
+		}
+
+		startTime = Sys_Milliseconds();
+
+		// make sure mouse and joystick are only called once a frame
+		IN_Frame();
+
+		// run the game
+		Com_Frame();
+
+		endTime = Sys_Milliseconds();
+		totalMsec += endTime - startTime;
+		countMsec++;
+}
+
+void Com_Frame() {  // qcommon/common.c
+
+	int		msec, minMsec;
+	static int	lastTime;
+	int key;
+ 
+	int		timeBeforeFirstEvents;
+	int           timeBeforeServer;
+	int           timeBeforeEvents;
+	int           timeBeforeClient;
+	int           timeAfter;
+
+	if ( setjmp (abortframe) ) {
+		return;			// an ERR_DROP was thrown
+	}
+
+
+	// bk001204 - init to zero.
+	//  also:  might be clobbered by `longjmp' or `vfork'
+	timeBeforeFirstEvents =0;
+	timeBeforeServer =0;
+	timeBeforeEvents =0;
+	timeBeforeClient = 0;
+	timeAfter = 0;
+
+
+	// old net chan encryption key
+	key = 0x87243987;
+
+	// write config file if anything changed
+	Com_WriteConfiguration(); 
+
+	// if "viewlog" has been modified, show or hide the log console
+	if ( com_viewlog->modified ) {
+		if ( !com_dedicated->value ) {
+			Sys_ShowConsole( com_viewlog->integer, qfalse );
+		}
+		com_viewlog->modified = qfalse;
+	}
+
+	//
+	// main event loop
+	//
+	if ( com_speeds->integer ) {
+		timeBeforeFirstEvents = Sys_Milliseconds ();
+	}
+
+    // Server code
+    if (server->integer) do_stuff();
+
+    // Client Code
+    if (client->integer) do_client_stuff();
+
+}
+
+*************************************************************************
+*********** Beginning of Conversion Process *****************************
+*************************************************************************
+Beginning of Conversion:
+thinkers have: 
+point2_t sq;
+point2_t pix;
+point2_t ma;
+
+in common.c:
+point2_t is typedef int point2_t[2];
+
+X step 1) search for all instances of point_t and point2_t 
+X step 1b) write down a list of them
+step 1c) grep for all the instances of them (their variable names)
+step 2) foreach point_t do:
+        - determine whether it can or should still be ints, otherwise:
+        - change most of them to vec4_t or vec3_t
+        - update the code to work correctly using floating math
+step 3) add a logic_fps value set to 30 lfps (logic frame per sec)
+    - this means that ghosts and the player now move 30 times per second
+        so the move amounts must be set lower for both (a sub-second float   
+        value like 0.113 per logic_frame.
+        code that runs the logic frames by getting this_tic, last_tic.
+        and runs the logic frame
+
+----------------
+progress
+----------------
+well, I've replaced this stuff so far:
+gameboard.c/h: entity_t: x, y, pix, spawn, respawn
+thinker.c/h: sq, pix, ma, spawn, respawn, respawnpix
+player.c/h: sq, pix, ma, pmove, mmove
+
+I still have to go through render.c and examine each coordinate maneuver
+and gl call.  
+
+---
+also, it might be nicer if you get rid of all instances of point_t and 
+pointX_t.  I switched all the point_t instances in render.c with vec2_t.
+
+actually it doesn't matter if they are there or not.  just dont use them
+anymore.  saying player_t.x & player_t.y is just fine.  its better than
+abstracting it to int[2];  that's stupid.
+
+man, I'm exhausted.  I guess I'll see if I can get it to compile at least.  
+then I can do the fixed logic framerate tomorrow.  
+-----------------
+- 2-25-2007 - 
+Ok, now I am re-thinking one aspect of pacman that I am attempting to change,
+the sq property of player and thinker which is the x & y of the square that
+they are on, well, it is no doubt a discreet number.  square numbers will
+never in any way be fractional.  pixel offsets however will.  Another thing,
+when you increment square coordinates its because your pixel offsets exceed
+one square width in pixels.  but now, i wont have discreet pixel amounts
+so I will also have to include the fractional amount of the pixel as roll-over.
+I dont even know how I do this so.
+
+I feel like I've mentally left this project.  I think that part of it is that
+I am unable to deal with , well, I cant remember things.  so even though I
+have a good impression about this project, which things are in which files,
+I dont fucking remember the code in order to work with it.  and re-learning
+it sort of puts me in a tizzy, which sucks.  but yet I feel this deep seated
+need to code and code.  but an aversion to making pacman work.  probably 
+just because I dont really know what I'm even doing at this stage.
+
+2-26
+*** I am changing back the sq values in player and thinker to int. ***
+
+2-27
+I got the logic code in there.  created a datastruct called pacengine_t.
+it holds a bunch of accounting info.  number of frames, tics, etc..  it 
+compiles and runs, and basically is jerky and aweful looking.  I'm not 
+interpolating though.  That could make a huge difference.  Of course this
+may totally be the wrong way to do it.  I haven't really thought through
+the floating pointt arithmetic.  
+
+the other strange thing is that no matter what I do, the render fps is 60.
+no matter how fast the game code, or whether it sleeps for 10ms or not.  
+rfps == 60.  probably something on the windows gl imp side.  i'll look for
+that later.  Initially I thought my gl code sucked extra bad.  we'll see.
+---
+3-9
+
+I'm back on again.  I've been doing wack shit like ... working.  which totaly
+sucks, but it pays good.  I have been reading a ton of ID shit the last couple
+days, and running quake 3 in the vs debugger which is a major revelation. 
+so I read a bunch more and posted to the doom3world forums a few times and 
+just a minute ago I had this revelation of how big of pricks ID are.  I mean,
+its an insane level of technology, but the tech no matter what falls a far
+distant second to the story, the vision of the story, and they tack on story
+as an after effect like a porno does.  your there to see skin/graphics, and
+the story is just the vehicle which causes character movement.  but it feels
+SOOO empty.  that I'm ashamed, and I hate them.  and by breaking free from ID,
+I become free to make a game in whatever image I want.  and then I realize 
+that so have 100's or thousands of others and done a damn good job of it.  
+its about the story, and the vision and this just kitchy childlike fascination
+with something so interesting that it hooks into the back of your imagination
+and wont let go.  Id's games have hardly ever had that.  they're so brutal
+and banal and empty.  get gun, shoot gun.  but they do it so well that its
+still hard to argue.  but they're not ___immersive.  they're not.  because 
+for in order for it to be immersive the story has to work.  and their story
+is , well, completely non-existant.  and not only that but you can sense the
+designers lack of respect for even the idea of story, or the their pinhead
+belief that what they have IS story, when it couldn't be further from it.
+I dont know .  the point is, that using their tech and their code to get 
+started is going to be important.  but looking to System Shock, Privaterr,
+Starflight, Metroid, DeusEx and other games like those for inspiration is 
+going to be the most crucial element to continuing down this path.  if all
+I try to do is to be like those dicks, get a juicer and some nice shirts and
+goto cons and use smoke and mirrors to make other saps buy my product, then
+fuck, your over.  
+
+Its all original from here on out.  I need an original IP.  an original engine.
+original tools, original GUIS and design methodologies, and original stories,
+and original music that kicks total ass.  and I need a website and I need a 
+team, and I need to pimp my shit with as much gusto as other folks do.  that's
+what I need.  and dont forget that.  You aare not like them.  They are better
+technicians who have a 12-15 years headstart and carmack.  but they're all
+tech , tech and corporate strategizing at this point.  Ponces.  that'll be my
+code word into the  distant future to help remember.  Ponces, means ID are 
+dicks.
+
+:::::::::::::::::::::::::::::::
+::: What to do about Pacman :::
+:::::::::::::::::::::::::::::::
+
+- I still dont have my timing code right.  Probably the thing to do is
+    a) Solve the Problem yourself. just think it through on paper,    or
+    b) figure out how ID does it
+    c) fix the timing code conclusively for ghosts and everyone else.
+
+once I have timing, then I can start on other stuff.   
+
+---------
+070312 - going back at it.  I've been blocking.  I got an email from Carmack
+on Friday so that helps.  All of Id's code is C++ now.  so I'm officially 
+beginning the push the move to C++.. also, ID posted job openings that I'm
+not going to try for, but that are posted and I wouldn't mind getting never-
+the-less, and 3+ years of C++ was a big attribute.  I dont have it.  barely
+know the keywords.  
+
+anway, I also decided that I have to get back with the program and continue 
+working on Pacman and finish it so that it works like a proper video game and
+not a buggy thing.  its something to do with that pressfield resistance, and
+if it has to do with resistance, then I have to go back at it.  I looked at
+the windows code this morning and remember how awful that was, but I got 
+through it.  this timer will be the same, thing is , I'll be vastly better for
+having actually figured it out.
+
+60FPS means the time to do one Frame is 1/60*1/s.  in ms that's 16.666ms.
+
+Render FPS we're setting at whatever the machine can handle.  
+
+Logic FPS we're setting at 60.  This will have to be locked in so that the 
+game plays uniformly across different sorts of systems.  more about that later
+have to goto a stupid meeting. 
+
+-- later --> I worked on pacman a bit.  the first thing i decided to look at
+was how fast the game ran in fullscreen, so I tried to figure out how to get 
+it to work in fullscreen.  It does work though, now.  But I'm not happy with
+it.  In the pixelformatdescriptor and in the glWindow init (cant remember
+the data struct type, but the colorbits were set to 24, I set them to 16 and
+it just started working.  although, quakes are 24, so it'd be better to 
+go through quake and see how it makes 24 colorbit depth work.
+
+* make 24 color bit depth work in fullscreen
+
+* second, I timed the display routine and find that it actually takes 16-17ms
+to render.  what a fucker huh?  I timed just the flipping of the buffers and
+that only takes less than a millisecond.  probably like ~0.200 ms.  maybe less.
+so the whole problem is occurring in my stupid render routines.  and if you
+look at them, they aren't that good.  thousands upon thousands of steps.
+big loops to go through to pull up all the data that blits.  , then glFlush
+is called, and then the Buffers are flipped.  
+
+I also re-wrote the logic frame timing code, its messy right now because this
+is a rough first draft.  , but it seems to work ok, and even draws "smooth
+enough" for now.  pretty smooth.  consistent.  there are jumps though, but
+thats probably because the render phase takes so friggen long.  if I could
+get that down to 4ms or less, that would be considerably better.  
+
+I just tried one more quick thing.  I changed the logic_fps to 20 to make
+sure that the logic and the render rate weren't connected.  they dont seem to
+be.  the rendertime actualy does take 16ms!!!!  That's crazy.  well, I kind
+of look forward to that challenge.  I was wantingt to do somemore opengl, well,
+here it is.  lets do it.  display lists, vectors, all that shit.  anything to
+speed it up, to about 10% of its previous suckage.
+---
+so actually, the independant logic fps works very good, but there is this
+nasty jitter.  I mean, I like it better than olofsons, well, his pig is real
+nice, but it gets this crazy jitter.  I'm not sure that a renderer re-write
+would fix it.  but it cant hurt.  
+
+what about vertex arrays?  should I try a test program first?  
+
+* Vertex Arrays are good
+* Interleaved Vertex Arrays of vertex & color data is better.
+* Vertex Buffer Objects - newer, faster, slow to read and write to memory
+                          but super fast when you draw with it.
+* Display Lists - even faster way.  static state.  always use Just Record.
+
+from the blender guy.  I liked him.  vertex arrays have to be the way to go
+for now.  I was thinking, well, it seems crazy, that i have this set of
+squares to make up the board, and that I have to RE-get them each time, which
+the underlying board doesn't change at all.  its pretty messed up.  If I 
+re-wrote it for a 2D api, I could massively speed it up just based on that. 
+Look, Olofsons framerate was what?  11000rfps ?  maybe more.  mine is 60. 
+sad dude.  sad.  
+
+I tried Display lists, I figured that was perfect, its the fastest and 
+yet would be fine and fast and with no penalty, but they did not work as i
+recall.  perhaps I should monkey with them again?
+
+-- Newsflash, I compiled a display list, and guess what, no framerate 
+improvement whatsoever.  Its still fucking 60Hz!!!  Now I'm going to slightly
+re-write the dots code to be faster.  there are some wasted cycles there.
+
+But!, I did notice that the game played better after I was calling the 
+display list instead of drawing the gameboard in immediate each time.  keep
+going.
+
+-- Good News!  I stuck a timer around each one of my routines to find out
+who was taking up all the time, its the PaintFonts routine, which is not
+my code really.  its someone elses.  All of my routines happen in less than
+a millisecond.  consistently zeros.  but the paintfonts code happens in 15-19
+ms.  so that's the culprit.  I'm going to remove it and see what kind of
+display framerate I get, and then go in and fix it up.
+
+well, not so great news.  now I'm not so sure that it was the fonts.  it may
+have been that they were slow.  but I still the thing only refreshs oddly
+always around 60Hz, well the most likely explanation must be that the buffer
+flipping is locked into the display refresh rate.  Here is a sample output
+from all my timed executions:
+
+GL_ScaledDownGameboardDraw: 1
+GL_DrawDots: 0
+GL_BlitPacdude: 0
+GL_PaintGhosts: 0
+GL_PaintExtraGuys: 0
+GL_PaintFonts: 0
+RunFloatingNumbers: 0
+R_DrawPurgMsg: 0
+glFlush: 0
+R_RenderFrame: 1
+SwapBuffers: 16
+I_Refresh: 16
+P_DrawsResets: 0
+time to render: 18
+
+I_Refresh calls SwapBuffers, and SwapBuffers is one func call to windows.
+
+so its google-able.  I'll try full screen first, see if that breaks the spell:
+
+well, so I'm learning my lesson here.  why not to be a programmer.  this is
+the biggest miasma of junk!  I'm searching around for a function aparently
+called wglSwapIntervalEXT(0);   and I can't fucking find it.  Quake uses it
+just fine, but just looking at his opengl implementation, I am fucking baffled.
+I mean, I know that i have to get this far.  its effortless.  and in the face
+of such painful and ugly microsoft code.  mostly just in that there are a 
+million and one completely UN-DOCUMENTED functions.  its flabbergasting.  
+and now its 12:40!  Fuck!  I'm so fucking mad.  I want to get ripped.  I might.
+
+Because this opengl imp is also very thoughtful.  its beautiful.  it supports
+a buttload of contexts and different cards and setups, just by doing what 
+you're supposed.  by querying the system, getting info, using the right 
+commands, and in general, the commands make sense, I just cannot keep any 
+track of them at all, at least without some explanation, but of course there
+IS NONE.  and that is maddening to me.  
+
+What is my work again?  TO make a cool game.  to make it work.  Should I just
+steal his opengl backend as well?  I'm considering it.  
+
+basically patch carmacks code together into some sort of useable framework.
+who cares about convention, or attributing authorship, or any of that.  just
+get the game done.  what counts is:
+
+- A person installing, clicking run, and seeing a game.  
+
+That's it.  furthermore:
+
+- playing the game, wanting to play the game, having the game make them 
+_FEEL_ something.  something good.  smooth alluring music, beautiful scenes,
+sub-consciously encoded pattern material, puzzles, nifty little situations
+and stuff.
+
+I'm certainly not above coding, but I'm getting awful fucking sick of my 
+limitations, such as wading through these UGLY fucking HUGE API libraries
+taht encompass 4-hundred million fucking function sets, and what's the poiint
+of any of them.  we just need a display section that works, a sound section
+that works, a simple API that hides EVERYTHING, and just make the game, 
+think through the shapes, logic, images, thta sort of stuff.
+
+Hell, if that's the case, I should switch to SDL.  just skip all of this.  
+
+Of course I want to emulate my heroes, but I'm not them, and time is running
+out.  my valuable quality as a person will be making a finished game that
+does something, looks good, plays well, and introduces ideas that these
+fucking famous guys never would think of , so that I can say and be _AT_ 
+their level, because I know the Zeitgeist of what a GAME is BETTER than they
+do.  
+
+bahhhhhh
+
+NEWSFLASH !!!!!!
+
+I did it again.  Check this out!
+GL_ScaledDownGameboardDraw: 0
+GL_DrawDots: 0
+GL_BlitPacdude: 0
+GL_PaintGhosts: 0
+GL_PaintExtraGuys: 0
+GL_PaintFonts: 0
+RunFloatingNumbers: 0
+R_DrawPurgMsg: 0
+glFlush: 0
+R_RenderFrame: 0
+SwapBuffers: 1
+I_Refresh: 1
+P_DrawsResets: 0
+time to render: 1
+
+
+******************************
+**** Final Score:    2810 ****
+******************************
+total tics: 25982
+Secs played: 25.982000
+logic fps: 59.887614
+render fps: 756.100367
+
+FUCKING A!  Finally!  fer Christ.  Oh man, that oh so so rulez.  I just
+went in and found the 6 or 7 key lines of code in the quake3\code\win32
+directory.  and basically going on a hunch from google figured out which 
+function would do it, so you pass 0 as a param to a wgl extension in order
+to set the min render frame rate.  now there are some serious problems with
+this.  basically you have to write the code as such in that it queries the
+system about the opengl32.dll , and then gets version information and such,
+but no worries, that's all in quake too.  because different behaviors will
+result.  you should see it, now when the spinning screen runs, it goes well
+756 / 60 times as fast as it did before.  so it just whirls around in a blur,
+truly utilizing the power of an OPENGL_ICD, Independant Client Driver. 
+man oh man.  I think one of the function is QGL_Init, which explains that
+it does a bunch of load libraries, and then you have to initialize the dll
+library, and get all the gl Functions as pointers, from that dll library,
+wowee, its fast though.  alright.  this should fix things up.
+
+Ok, so I'm still seeing some wierd stuff.  If I turn on sleep, the framerate
+goes down to 63, but the CPU usage goes to 0.0;  which is good.  if I turn
+off sleep, the framerate goes back to 700fps.  so, not bad.  I turned back
+on the font drawing.  and I left the timer around it, and whta I found was 
+that every 10 or 20 varying, it would still take 15-17ms, otherwise it would
+then take 0, 10-20 times in a row.  wierd, unexplainable,  
+
+but if anything this is a lesson for me that there is ALWAYS more to this
+stuff, I mean, until you're right down next to the CPU and you've already
+gotten to the very bottom of the OS, then there is more, more creepy stufff
+happening.  the dll thing is promising acutally.  you can scan for different
+kinds of drivers and then read up on what kinds of extensions that they have,
+etc..  
+
+well, the game isn't in a distributable state at all, but in a perverse way
+I feel like I've made progress.
+
+
+-------------
+3-18-07 - I had a mini-nervous breakdown from the above night.  I think that
+I had figured out the dll loading routine and wgl calls by 3am, it screwed up
+the rest of my week, and I really wasn't better until friday, and it happened
+on monday.  anyway... (well, it could've been the drinking on tuesday too)
+
+I carved away at it yesterday and made a little progress.  its difficult
+progress to see though because my primary foe, the JITTER is still there.
+i've isolated it down to the logic code.  it has to be something to do with
+the fractional storage of logic frames.  I added a variable to pacengine 
+that locks the display updates to the logic updates.  turned that on and 
+now they're both displaying at roughly 60fps, in lockstep.  and actually,
+it looks pretty good, except for a week jitter.  there are many more options
+in the display interaction.  see event.c for some controls that i added that
+you can toggle while playing.  
+
+I guess what I used to do was just check that enough time had gone by since
+the last total update (logic: thinkers, player, & drawing) and if it hadn't
+just spin in the main loop until it had.  then allow all that stuff to happen.
+
+if you uncap fps now, there are some really fucking cool oversampling things
+that happen.  like when the player teleports, it samples like 5-10 times in
+the one-logic-frame jump, and the interpolation causes the player position
+to fly all over the place.  I really like it, but its probably too dangerous
+to actually use for anything.
+
+so, I could go back to that, I mean, the problem seems to be the keeping of
+fractional logic frames.  that can only lead to trouble.   you either draw one
+or you dont.  every time you succeeed in drawing you should throw out the 
+extra... yeah, maybe.
+
+***** I think I have it.  I have so many refresh tweeks sewn in now that I 
+can turn them all off and on giving me like 16 or 32 different combinations,
+the default combination is pretty good now.  I just added one thing, I 
+throw out the fractional render WHEN IT HAS RUN, but save it if it hasn't
+run.   This seems to work.  I dont like the idea of locking the display
+refresh with the logic.  but actually as I have it now, the display refresh
+and the actual drawing are lumped together.  for sure you only need to 
+re-draw the display if something has changed since last time.  that just makes
+sense.  but i could carve out the display refresh into its own thing.  not
+important now.  
+
+there is only a slight bump that i perceive.  its almost the same thing as
+the slight bump in Olofson's.  just a very faint steady pulsation in rate,
+or perhaps curved dip in rate.  repetetive.  
+
+this has been a giant pain in the ass, but perhaps I can finally consider it
+solved.  I'll have to run it a few more times to determine which setting  is
+the good one, and then run it on some different computers to see how it 
+responds. 
+
+then I'll have to decide what needs working on next?  I think that I was 
+planning on getting sound to work, but perhaps some better animations first?
+its still visually dilapidated, so a re-do on the main characters.  OH OH
+
+:::::::::::::::::::::::::::
+:::::::: SNOOBER! :::::::::
+:::::::::::::::::::::::::::
+
+I scribbled this yesterday on a piece of paper:
+
+"Call the game "Snoober!" & give the guy a big, brown, conical nose like a
+racoon.  Change the game theme to a racoon wandering around through streets
+and backyards at 3am, foraging through trash for food.  Instead of Ghost have
+Animal Control, or just people.  Instead of Fruit have Pizza, Steak, Chicken,
+Melted Ice Cream, etc..
+
+---------
+The idea of NOT doing pacman is very enticing.  It has gotten me this far.  
+
+and actually, upon second look, its so close to being pacman, I might as well
+finish it.  all I have to do is:
+
+* Add animations
+* Add Sound Code
+* Add/Make sounds
+* A Title Screen
+* Collision Detection
+* Pathfind
+* Flashing ghosts
+* ghosts through teleports
+* improved teleport performance
+* eyes that go back to base 
+* move ghost spawns inside box
+* make a barrier so that player cannot go inside box
+* remove pointer (maybe)
+* Add a tray/window icon so that it doesn't just look like a box
+
+That isn't actually that much.  Sound might take a bit, and animation a bit,
+Sound is really two separate things, code and actually making sounds.  
+
+Collision Detection and pathfind might be a bit.  and the eyes, flashing
+that sort of stuff..  but really the rest of the list could mostly be done
+in one day.  its the sound, collision detection, animations, pathfind that
+are difficult.
+
+Just finish it in C.  
+
+Enter it in contests just to do it.
+
+Make a simple web-site.
+
+----
+OK, I've discovered a problem.  I am throwing out fractional logic frames, 
+so guess what, the logic fps isn't correct.  its running at around 55 and then
+it levels off, even though it is set at 60.  Why does it level off?  dont know.
+
+how can you get it to where it is supposed to be without jitter?  for now,
+it'll work.  but its still not good enough.  not robust.  not prime-time.  not
+even Beta.  
+
+So a re-write of the above list would be:
+
+:::::::::::::::::::::::::::::
+:: NEEDED TO FINISH PACMAN ::
+:::::::::::::::::::::::::::::
+A) substantial
+* Sound Code
+* Making Sounds
+* Animation code and Animations
+* Collision Detection
+* Pathfind
+B) details
+* detect system speed, cpu, display driver, and adjust the renderer settings 
+* Title Screen
+* flashing ghosts
+* ghosts can go through teleports
+* improved teleport performance
+* eyes that use pathfind and go back to box.
+* invisible, impenetrable barrier so that player cannot go inside box
+* Add a tray/window Icon so that it doesn't just look like a box.
+* Redo the pacman icon.
+::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::
+
+well, that' was instructive.  I am working with 258-259 now, compiled a 
+release.  (added a line in the Makefile to make a zip).  uploaded it and
+then dl'd to anotherr computer and the fuckingg logicfps runs at 33!  which
+is shit, because then the whole game runs reallly slow. 
+
+Ok, so I've breached a barrier, sort of.  I threw out the remainder and
+it seems to run fine.  BUT, well, its a control systems problem.  Just like
+that class I had in college.  It is a discreet system that has a sample
+rate, and a desired logic framerate.  now if you keep the fractional frames
+it maintaines its desired logicfps, BUT, it jitters and that is unacceptable.
+
+Man, how many times do I have to re-phrase this.  I'll add a way to turn off
+throw-out, and compile/upload a new version for testing.
+
+******
+I has to detect the system, and detect the display driver, if its a shitty
+display driver (it remains to be seen which ones are called what), then the
+throttle is to be dis-allowed.
+
+I am running pac, on a computer running vga.dll, and it works fine, but looks
+a lot better if the throttle is turned off.  and Turn off Interpolate too
+while you're at it, and display start up messages showing what did what to
+aid debugging.
+
+so that is a definite todo, detecting system speed, cpu, display driver, and
+adjusting the game behavior.
+
+duh, I disabled the throttle, and turned off interpolation so that the game
+would run good in most places, and then just went in to the pause function,
+and if the game is paused, I added a sleep(10), duh, stupid,  that way it
+wont thrash cpu when paused, which is the right thing to do.  duh, it amazes
+me that I didn't think of this stuff before (but I did, in my subconscious,
+just right below the surface.)  There is a lot of stuff in there, it turns
+out.
+
+Ok, I am mostly satisfied now.  it has the best defaults, seems to run ok, 
+on both machines with hardware acceleration and w/o, and it sleeps if it is
+either in the menus or paused, but doesn't otherwise, which is about cool 
+for now.  I already uploaded a zip, I'm going to commit this mess, which will
+be 262.  and take a shower, peace. 
+
+
+&* If I added extern "C" { } around the codebase as I have it now, the
+restrictions would be that the code inside those brackets would have to be
+C, but new files would be in C++, and I could even stop the brackets mid-file
+if I needed to, but that could probably be avoided.  so that might be one of 
+the next things that I do, the reason being that I can add the hashtable
+and linkedlist classes to this project and get my lines-of-code up to almost
+12k.!!  Muhahahahaha
+
+--------
+
+I'm still fucking with the rendering , and still I notice when you turn on
+the throwaway extra thing that it looks ok.  I also calculated the actual
+versus wanted lfps, get this its phi.  that holy number that comes as the 
+ratio between any 2 consequtive fibonacci number, particularly higher up the
+chain.  its 37.25 / 60.0 == 0.62 ...  
+
+I'm going to try a test run again.  
+
+Ok, I re-wrote the logic thing yet again a bit.  I did do that test run, and
+it was better, but this is even better yet.  although I have the logic FPS
+kind of high, running at 120.  I need to half it again back to 60, but 
+govern the speed which the dude travel differently.  I wanted to change to
+one pixel movements.  which I did.  having move amounts of 2 pixels is not
+good.  instead,  I'm thinking that movement should be almost time related,
+how many logic frames per each movement?  yeah, 
+
+I do think that I am getting somewhere.  by now i have thought this damn code
+through so many times, its sort of ridiculous.  but the jitter just isn't
+acceptable.  it is totally fucked.  and before I can start painting , you 
+know, that tetris idea I had, what would be the point if it fucking jitters?
+There wouldn't be one.  exactly.  Fucking drives me insane.
+
+yeah, I would say that it is somewhat fixed.  I am very surprised at how 
+laborious this has been.  I keep picturing doom because I played doom 
+yesterday, and how it wouldn't matter so much because you'd be looking at a 
+3D projection of an area, and wouldn't even be able to tell if the updates are
+jittery, whereas I'm looking at this little, discreet, 2D guy, and if his
+pixels movement velocity jumps even slightly, I know it.  
+
+the way that I have it written now is about perfect as far as I figure.  
+higher display framerates seem to help, so I'm leaving them un-capped, hey,
+that's what all the id stuff always did, they invented "fps's".  heh.  which
+epitomizes 100% cpu usage.  fuckit, I'll just leave that out.  I have it 
+so that it rests the cpu on pause and menus.
+
+ok, so you do need a pixel movement amount, but it needs to be float.
+
+I think that I changed that already to floats.  the game logic is too fast.
+100 FPS.  the reason is, that it matches my 1 pixel movement amount.  but
+these restrictions are silly.  
+
+since ma is float I'm going to monkey with it and see what happens.
+
+
+
+100 pixels / second = 100 fps * 1 pixel / frame = 48fps * n ppf
+
+100fps*1ppf = 48fps*n ppf  ==> 100/48 = 1/n --> n = 48/100.0 ==> 0.48
+
+OMG, I just reduced compile time by 90% by using 
+
+#pragma warning( disable : 4711 8888 9999 ... )
+
+that's huge.  jesus.  
+
+Fuck, now the error messages might actually start to mean something.  the 
+thing was, it was spitting out huge volumes of errors about the Microsoft
+files and headers, nothing to do with my code.  Fucker.  this is awesome!
+
+---
+20070319 - I'm working through the pathfind code.  I just thought of something
+cool to render once it works, have a func that draws a red line from each 
+ghost, that shows its path that it is using from PF_BuildPath(), that would
+be awesome.  then as the ghost moves around and the players location changes
+you can see how the ghost build a different path.
+
+ok, finished a revision.  haven't attempted compilation.  that code is tighter
+than ... just about anything.  its soo tight.  its almost as useful as C++,
+except that C++ has advanced type checking.  I can't check to see who modifies
+what thing.  well, not easily.
+
+
+--- 20070320 - next morning,
+
+ok, made a list of still todo in order to even get the path thing to actually
+do anything.
+
+* create a thinkerpath_ thinker-side data struct which will hold the path,
+and manage the durations of creation of new paths
+* wrote some code to gen the thinkerpath inside the BuildPath pathlist.c side
+of code
+* put one path struct in each thinker
+* wrote a quick init.
+
+now I need to take a break, get breakfast and chill.  and come back to it and
+picture it working. 
+
+---
+5pm, well, today wasn't that eventful and I managed to get 3+ hours in on
+the code and I am happy to report at 5:30pm that its working ok.  fucking 
+yahoo!!!  I mean I actually do get a valid A* pathfind w/ Manhatten Heuristic.
+I haven't even delved into the particulars AT ALL.  but that's ok.  for right
+now, a straight-forward, not even optimised pathfind is perfectly all right.
+
+there are so many millions of tweaks that I could make to alter its behavior.
+basically though they need to be smart enough not to get stuck in the closed
+box,  and even do the pathfind through TELELPORTS and path attentions to other
+special things like oneway barriers.
+
+Man, I'm beat though.  I've been pushing myself really hard to get this.  My
+nuts hurt.  I dont know, I am beat.  I better take it easy, I think that I'm
+on the verge of burnout.  and that was catastrophic last week.  Hell, I know
+that it works, what to do next should be fairly obvious.  start experimenting
+with limiting the path length, see how fast it is, implement the piece of 
+code in thinker that decides how to use the path, when to compute new paths,
+etc...  is it a time interval or square interval ?  Try both, I think square
+seems more organic, but time would be less so and perhaps have some benefits.
+
+It'll be much more exciting I think, if the ghosts get really smart.  
+
+Also, I'll be able to implement the eyes REALLY EASILY.  and put the ghosts
+back in the box.  Oh man, this is going to be great, and come to think of it,
+the box is a big fill-trap, so I should flag the 2 squares that enter it as
+one-way invisible walls.  oh totally.
+
+wow, this is great!  great great great great.  advanced algorithms for a simple
+guy like me.  I'm gonna go have a beer I think.
+
+---------------------------------
+070321 - pathfind has been a wearysome experience.  I've gotten a lot done,
+but still haven't really gotten anything back out of it yet.  Now the problem
+that I have has shifted from making a path with a pathfind algorithm to
+using it.  Using it isn't exactly a 10-line of code breeze.  You need to
+completely dig down in there and keep track of each pixel travelled.  
+
+What I'm thinking now is that I am going to implement the pathfind to 
+
+require a regen: 
+* after so much time, 
+* after so many squares
+* at nodes of 3 or more allowed directions
+* upon re-spawn 
+* upon coming out of chased mode
+
+----
+
+well, I have a reasonable facimile of the beginnings of pathfind usage.  what 
+I do need is this:
+
+* Restrict all direction change to 90% NODES (3 or more open passages) or
+otherwise stated as 90 degree turns only, not 180s.  that goes for pathfind, 
+being chased, spaced out, just every kind of motion.  Although the original
+pacman would do a 180 but rarely, usually in VERY USEFUL situations only 
+such as moving away from a player that he should be eating, every pixel
+moved give him a 5% chance to turn around and face the player.  same for if
+he is moving towards the player and is 'chased'.
+
+* given the previous, work on the non-pathfind kind of thoughtful, guided 
+movement.  this will come in handy for situations when a path isn't returned,
+but we still need the ghost to _DO_ _SOMETHING_.
+
+* give the 'chased' some slight intelligense.  ie, pick a point across the
+map from the player, and then use the pathfind to get there.  thus moving
+away from the player.
+
+* Plot red lines (use glBegin(GL_POLYS)) to show where path goes.  (toggleable
+of course)
+* change all ghost start points to inside center box
+* send eyeballs back to center box. 
+
+* Also, fan out the ghosts a little better (I'm not sure how), they can all 
+go straight for the player, you need one or two guys always sort of hanging 
+out where the dots are, not where the player is.  but usually have 1 or 2 
+going after the player to keep the heat on.
+
+----
+Honest assessment:  The logic framerate still isn't right.  it still jitters.
+I dont like the jitter.  I dont want the jitter.  It should not be there and
+that is that.  which means that I am doing it wrong.  end of story.  
+
+The pathfind is at least visible, but its a far cry from what it needs to be,
+and by "its" I mean the whole of the ghost intelligence code.  There's a lot
+to it.  They:
+
+A) Still walk through walls
+B) Arent intelligent in that they swarm and surround the player
+C) walk back and forth in a hallway (get stuck)
+
+so i need to get that stuff fixed.  The framerate and the thinker intelligence
+needs a grand re-design.  it all comes from me.  I must envision what the 
+ghosts must do, and write something to make them do it, all 4 of them in a 
+symphony.  I have the pathfind and can call and use it when i want, which is
+a powerful ally.  but not enough.  the fact that the fucking logic framerate
+jitter is still there is fucking totally un-acceptable.  The Fucker!!
+
+--- NEWSFLASH ---
+I just commented out the part of the TryRunLogic that loops through logic
+runs, and instead it just does one logic run no matter what and its GREAT!
+It makes sense, think about it, you shave off a little piece.  getting say
+1.1 logic frames for every time you enter that function, the 10th time it
+runs an extra frame thus making JITTER.  now it doesn't seem to jitter at all.
+it runs what it can, ... yes, that is it.  I am confident and Olofson has 
+led me astray for SURE.  This is good, because this this thing has plagued me
+for ever.
+
+Ok, so now I can just write a useful thinker code path, and move on to 
+animation, new sprites/icons and sound.  Hurray!!!!!!!!!
+----------------------------
+ok, I just had a vision.  I dont have the math for it yet.  but here it is,
+preface:
+first: I removed the loop logic, that removed the jitter.  but, 
+        the logic fps drops below the spec.
+second: I added a fudge factor to the test in the logic that decides to
+        do a logic frame, and it still looks ok.  
+third: so since I know that I can add a small,constant fudge factor and not 
+        add jitter, that means that the desired logic fps could be achieved
+        by using this fudge factor.  so how do I achieve it?
+
+guess1: take a list of extras, where :
+
+extra = dt - msecForOneFrame, (msecForOneFrame == (1000 / fps))
+
+what we were doing before was waiting until the extra added up, and then 
+throwing in another logic frame.  fuck that.  instead we need to average
+out the average extra over 10 frames or so, and then make that the fudge 
+factor.
+
+extra[pe.logicframe%10] = dt - pe.msecForOneFrame;
+extraAveraged = 0;
+for (i = 0; i < 10; i++)
+    extraAveraged += extra[i];
+extraAveraged /= 10.0;
+
+????
+
+------------
+Just as I was winding up to put the finishing touches on the perfect logic
+frame code, something insane and devastating happened to me.  the system
+call 'timeGetTime()', stopped working correctly.  the resolution in timeGetTime
+somehow changed to 15ms.  so over the course of a 15ms timeslice as I call it
+it reports back the same value, over and over and over, and then after 15-16ms
+it reports the updated value.  
+
+This devastating as it completely ends my ability to finish up.
+
+I had figured out what to do presuming the timeGetTime to sttart working again
+someday.  what to do is to keep a little amount, call it 'mixture' or one of
+those engine terms, and that is the fudgefactor, and then do an updated
+LFPS check.  if LFPS is falling behind remove a little from fudge factor which
+makes it more likely that logic will be called, but just a smidge,
+
+so this will be an auto-correcting feedback loop.  just like the IDLE on
+a lawnmower.
+
+IDLE.  that's what the fudgefactor is called, or at least the part that is
+auto-changed.  can also go into the negative, so that
+
+
+idle += 1000 / (getLFPS() - pe.logic_fps);
+if (dt + idle < pe.msecPerLogicFrame) 
+    return;
+
+----
+ok, now I see what I was going for before.  I kind of lost site of it, but
+now I see it, there is an add in factor, which I call 'correction'.  but the 
+thing is to not increase it quickly.  you must ramp it up and down slowly,
+with regard to time.
+
+I implemented it to take set a modest correction factor every 8 samples.  it
+only corrects, -1, 0, +1.  but it looks GREAT!.  the LFPS is now around 96,
+which is 96%.  which is good but it could be better.  the sample set of 8
+seems to be the magic number.  This is the BEST that I've had it looking. w/o
+a doubt.   although it still feels like a tenuous balance to me, that could
+be wrecked by different CPUs/GPUs, etc..  
+
+I'm happy enough with it to almsot consider it fixed.  I suppose that it
+requires furtherr testing on other machines first.  
+---
+I made a mistake.  I hadn't noticed that the corrective algorithm that I 
+thought was responsible for this miracle of perfect refresh rate I was having
+wasn't working at all.  so it turns out that I was getting 95fps/100, and
+that it looked perfect, and that was it.  so I got it to work, and guess
+what.  all sorts of wierd side effects.  Its all getting more subtle now
+though.  more minute.  but I still notice it. and I still aint happy.
+
+so I did a bunch of that and got mixed and shitty results, even though for a
+moment there I was coaxing a perfect fps out of it.  well, what looked
+perfect on the screen.  actually , all it was was just leaving correction
+at 0.  
+
+--
+well here's an interesting twist.  this code path has change sooo much and 
+with no commits.  in any case.  I only do one sample now ever 16 frames or
+something, and set the correction on that.  I also lowered the lfps to 90,
+and that seems to be fine and capped the videofps to 120.  its not bad, 
+seems playable.  I'm tired and hungry.  I drink way toooo much.  I should be
+working out and having sex.  I was totally out of it today.  big loser.
+
+TODO: the path completely ignorant of the direction the ghost are travelling
+in, so the sprites are getting set wrong.
+
+also I just remebered when I was drunk last night, a good strategy for 
+starting chased mode.   cut the board into 4 quadrants, determine which quad
+the player is in, then choose the point in the far corner of the quad opposite
+of it.  one problem, how will the ghost know if it is an open ?  could mark
+it in the map, or figure out another way,
+
+then goto that point.  if you get there are are still chased, then check for where the player is, and choose a point again in the quad kitty-corner from him.
+and so on.
+----
+Ok, so I'm pretty happy with how its working now.  There is one caveat - 
+the gpu should be tested, because when I un-installed the nvidia driver and
+rebooted, the renderer couldn't keep up.  it could make a framerate at around
+33fps or so, but that means that it only comes back to the logic code enough
+times to allow 30lfps or so.  sooo...
+
+The Logic FPS needs a loop like it had before.  I just dont want to use
+that loop unless I absolutely have to because of the inherent jitter.  but
+come to think of it, it was fairly acceptable for a shunted display driver
+computer..
+
+--------
+this is a very interesting problem really.  reading the debug_log of the 
+occilation information is facinating.  It over compensates and the fps 
+increases, but only gradually does it increase.  Its totally control systems
+engineering.  from back in school.  dampening occilations.   
+
+I feel like I'm on the right track.  even now its fairly playable.  but I 
+just want to make sure that my solution is robust to use everywhere.  or 
+at least doesn't do anything "unforgiveable".  a showstopper bug.  like 
+speeding up from 1 logicframe per fps to 4, which just sucks.
+--------- 20070323 - 
+todo today:
+* quick make pacman sprites 3-4: this presumes writing a gl func to rotate
+    them in the direction travelling
+- chased pathfind: search squares using gameboard.index[] that are in the 
+diagonal quadrant from where the player is, find an open one and plot a path
+to it
+- work on different ideas for fanning out and path splitting, or even 
+random node behavior, turning an unexpected direction.  basically have to 
+define a very complex set of rules, ie. 'when travelling in a straight line
+can only reverse direction if: <2 or 3 situations>'.  So the majority of the
+behavior must be defined syntacticaly before coding. 
+- pacman sprite animation code
+- make 4 eyes sprites. (l, r, u, d)
+
+--------
+ok, working on the logic framerate again.  I have a new direction.  I'm 
+basing it on the gametic concept of doom.  using the I_GetTicks() function
+call which returns discreet logictics, incremented by 1 for every 1/FPS.
+
+I'm still getting used to that math.  anyway, it seems to work and generally
+be more stable than what I was doing.  I decreased the logic frame rate to
+35 to really put it to the test, so that brings my move-amount to 2.6 pixels
+per-logic frame.  and now moves look more jagged than before, but because 
+they are 28 milliseconds apart and not 10 milliseconds apart, the game only
+had to run 2 or more counts a handful of times rather than 100 when the fps
+was 92.  but 92 is too fast....  
+
+so basically, 35 should be plenty.  plenty of time for everybody to do their
+thinking and decide what to do.  the kick is that I will have a higher render
+fps, so you'll have to interpolate at least floor(120/35) times and maybe
+more.  so I should look into my interpolation, make sure that its working.
+-------
+This code is still pretty week.  or is it I that am week?  I say that because
+I am looking at image loading and reading code, and I am reading the same set
+of 4 purple(chased) sprites 4 times for each ghost.  I dont get it because
+the cyan ghost is the fast one in the game but the red one has the stats.  
+must be a typo somewhere.
+------
+Fucking programmers.  They're all probably so much better at this than I am.
+I swear.  its not fair.  I had some sort of genetic theory about my lust 
+today.  just that my own lust grows in proportion to my own fatigue.  as I get
+more tired I perceive firm bodies and bouncy hair on others as assets, assets
+that I can fuck, and in so doing, coopt to my own good I suppose.  that's it.
+that's the nature of my sexuality.  I see good genes as something which I 
+might be able to hijack and take for myself.  I am a pirate.  garrrrrrrrrr.
+
+but I have a little done.  some nice photoshopped pacmans with tons of anti-
+aliasing, and an animation stricture that governs which frame to be on based
+on the logic frame.  this ought ot be interesting.  but dammit, it ought to 
+work.  I would just like to sate for the record that I cleaned more than I 
+almost ever have yesterday.  My fucking apartment looks friggen awesome.  now
+if I only lived in a real city I would consider myself "making it".  again.
+
+----
+dude, I did it.  better sprite, replaced the stupid icon, it even plays ok.
+and the pacman animates using the logictic which means that it'll be a constant
+animation across systems.
+
+TODO:
+
+* Add huge OpenGL implementation file like in Quake3 that gets the function
+pointers to all the opengl functions to local funcs.  it'll be good experience,
+and it will be necessary someday, 
+
+* Get the Display List version of drawing the gameboard to work.  I think that
+it already does, just workout the kinks.
+
+X fix the gameboard spin rate, and number float rate to the logic tic. or
+to absolute millisecond.
+
+X Put the New Pacman sprites on Bottom of game instead of what's there.
+    for extra guys.
+
+* Quadrant square search alg. (for chased mode) 
+* In chased mode each ghost should goto a different quad.
+
+* Node randomizer Alg for ghosts.  such and such % chance that a ghost chooses
+to go a certain direction at a node at random.  
+    - algorithm to follow this straight-line path, returning coords of next-node
+      the ghost can then plot a pathfind to that node.
+
+* Sound Code
+* Eyes w/ pathfind for eaten
+* Ghosts blinking white near end of chased
+* Interpolate Ghosts
+* consolidate thinker tga loading into one place and dole out pointers,
+    (instead of loading files multiple times)
+
+---
+I am going home.  I'm going to make the eyes in photoshop somehow and then
+work on the ghost AI a little.  Perhaps do some of that opengl stuff if I get
+ambitious.  I've got to run and do dishes and shit.
+--- 
+fine-grained plan (tues):
+X fix sprite redundancy in thinker.c
+X- make eyes in photoshop
+X eyes-pathfind code.
+X- white ghost sprite
+- blinking ghosts code
+- ghost AI behavior
+- death animation
+- ghost chased mode
+
+Note: Steal the Font from the Opening Credits of "The Long Hot Summer".
+
+----------------------------------------------------------------------
+rapsheet:
+- in order to really get the eyes to work, I am going to have to do a 
+great deal of scripting.  the eyes should go back to the center box 
+(if there is one), and then once they get there, go around in circles to
+weedle away the extra time (if any).  to its not trivial.
+
+T_SpawnEyes (int x, int y);
+
+I'll need to add the eyes to the thinker list to run them, and remove them
+from the list as well.  but I also need an instant way to access them.  
+I might just try to put their polling func in the same place as 
+T_PolleatenChased();
+
+-------
+well, it works.  the eyes work.  you eat a ghost and they go back to the
+square that the ghost spawns from.  then they just sit there.  I started
+the eyes code at 9, its 1:30 now.  that 4.5 hours.  it may have bugs, and it
+really isn't finished.
+
+X they should stay moving( i have an idea to attach a small list of points,
+    and then have the eyes plot a destination to the next point in the list,
+    once it reaches that point, it increments the point and plots a new path
+    to the next point, once it reaches that one, etc, and this goes on round-
+    robin forever.
+* Remake the Eyes Sprite: you could make the cornea white instead of purple, 
+    and larger as well.
+
+*** BUG ***
+found one bug.  should be easy to find.  if you eat all 4 ghosts, send them
+back to the kitty, and eat another large dot (calls T_StartChaseMode()) before
+they're out again, it segs.
+
+---------
+4 months report.  I have 4 months in this program.  and it is starting to look
+like a pacman.  it does several things at once now.  and works 75% well.  4
+months isn't really that long of a period.  especially being that I have been
+working fulltime for greater than 3 of them and get what I can done by 
+stealing hours during the day, or at night, or on weekends.  I'm just worried
+that I'm taking too long.  and that to do my next game is going to take 
+longer, and then some.  which is practically unacceptable.  I expect my next
+game to take 8-12 months.  that's because there is a bunch of music to do,
+and other creative works like drawing, painting, rustling art, etc.. sooo,
+4 months so far doesn't seem that bad.  I grow with each iteration, and this
+game deliberately took the difficult route in having 100% win native code.
+and I've been working.  I got most of the game done when I just stayed home
+and did 4 days in a row on it.
+--------
+X - fixed the two bugs above this
+X - blinking ghosts
+X - ghosts AI
+X - ghosts chased mode
+
+All done.  and it seems stable too.  and its fun, going on very fucking 
+challenging.  I would say that I am ready to start sound.
+
+list of code things todo today:
+
+X fix spin board thing R_SpinBoardOut(1600,2000), G_InstantLoadLevel
+X system-tray icon (it shows up as a white box now)
+* large opengl function pointer list.
+    * swap out all opengl calls for my func pointer calls
+* get display-list gameboard draw working.
+* start writing screen effects
+* read doom: sound, screen-drip, screenshot
+* more AI features "spacing out", Heuristic: proportionate to distance to 
+    player, the closer they are, the less-likely to spaceout.  gradiated scale,
+    have 3 or 4 discreet levels of spacing out, 1-4, the 4th level being nearly
+    completely spacing out, the 1st level being 80% not spacing out.  right on
+    the players tail, but still, in real pacman, if you can endure being tailed
+    for a sufficient amount of time/length, there is a chance that the red 
+    ghost might make a wrong turn and you might lose em.
+    so along with the heuristic, add a timer, the timer starts when you begin
+    a spaceout level, and if the timer goes off, the ghost must turn in a 
+    direction NOT facing the player.
+* read quake: sound
+
+random thoughts:
+- add a few different methods of cycling around for eyes after they reach center.  mix it up.  mosaic of complexity
+- animate large dots (swell out)
+- ghost through teleports
+- better collision detection
+- death animations
+- fruit
+- convert everything to native C++ (w/o extern "C" { ... } )
+- video effects code
+
+-------------
+I was thinking on the walk home.  what if I just forked off the pacman
+base and made something called "zombie tetris" and put lots of pictures of
+zombies in a title screen (because I really just want to do that), and then
+write a tetris game based around the sector code.  so a great many and varying
+types of pieces instead of the same ol' 4 pieces of standard tetris.
+
+my timing code works now.  why not.  the thing that I really wanted to do 
+was to make my own game.  my own.  see everything through the fresh light of
+not emulating shit.  just seeing it in its naked Ur-existence of just being.
+
+perhaps I should move to "zombie curses" sooner than I thought.  but I still
+dont have sound code, so I _should_ do that this weekend.  I could do 
+animations and add all this shit to pacman fairly easily I think.  probably do
+that whole above list w/o breaking much of a sweat.  and pacman would indeed
+be better, but it'd still be pacman.  alternatively, I bet I could finish my
+tetris game in a long weekend as well.  I will rest tonight, for tomorrow I
+code.
+
+
+- arbitrary splash-screen
+
+- animate large dots (swell out)
+
+- get display-list gameboard draw working.
+
+- read doom: sound
+
+- Replace Uses of "MessageBox" with in-house GUI WYSIWIG UI window
+-----------------------
+good stuff, I decided to just recklessly texture the background.  it looks
+good.  its simple.  I'm too tired to write difficult code.  just copy-pasted
+some stuff, then stubbed in about 3 functions, and bam, I've got textured
+backgrounds.  and after texturing the background, the title screen with its
+bleek blackness looks quite bare.  So now the deal is art.  I need art, 
+drawings.  paintings.  and some slaving over photoshop.  so I need to learn
+howto draw.  I should at least be able to draw better than I can sing.
+
+----------------------------
+X- stack underrun error in opengl
+X- virtmem total memory used counter
+- libpng code (and bmp code for that matter)
+- sound code, read doom, whatever
+- add more calls to poll for input (make more responsive) and process the
+    events.  Doom checks for updates 2*12 times, while it is thinking.
+- Direct Draw Boilerplate
+----------------------------
+Alpha Blending - Here's what I've been up to.
+
+DirectDraw, considering that for 3 days.  Then actually going back to OpenGL
+and realizing that there is a way to do what I want, and probably make it 
+look very good using a combination of alpha blending and 
+
+glEnable(GL_ALPHA_BIT);
+
+hmm, lets see, I'll get the code. 
+
+steps: 
+p1_1 - re-generate the anti-aliased sprite images over a perfect white 
+    background (but how do you have white in the image, you could have a black
+    background like it is currently, but invert the color blend from black
+    to white, of course I dont know how to do this,  in the alpha-blended,
+    anti-aliased sections only, but that wouldn't work because whatever
+    equation you use, you would likely end up with color differences, tonal
+    differences obvious enough to the eye. )
+p1_2 - regen the sprites over white, pick a key color for the background
+    that is neither white, nor black, but some way out color like hard
+    green, or purple, then run your edge detection algorithm across all the
+    solid wacko color, removing all of that tone from the image.  see if you
+    pick a farout enough color, then the eye wont miss it.  a key color.
+
+p1_3 - so now you have an edge, and you have whats not image, and what is,
+    3 things.  set the image to 100% alpha channel, its not that image
+    so it wont be clipped.  no clip, no blend.  
+p1_4 - fill the other areas right up to the anti-aliased edge, with the key
+    color.
+p1_5 - remove the key color from the anti-aliased area, leaving hopefully
+    whatever color was there bleeding over from the image, and not any of
+    the background, rendering that instead translucent, also set a real low
+    factor of Alpha, so that these areas will be blended with the background,
+    bleeding over on top of what's already there.
+
+    ( i bet this is like blue-screen, or green screen techniques from the ol'       starwars days )
+
+1 - when compiling the image, check what the gl mask is for GL_ALPHA_TEST
+2 - use that value to figure out where the edge is around the image, (both
+    internal and exteral)
+3 - store that in a seperate array
+4 - run around the edge and get a figure of the amount of , or where the pixels
+    are that have some Anti-Aliasing.  in fact, add a field to the image_t
+    for anti-aliasing.   store all these pixels to yet another array (or 
+    somehow reuse the otherr one)
+5 - only where these pixels are, set an alpha blend value under 100%, 
+6 - also set values in the image to .... well, actually that doesn't matter.
+    just the pixels that are in the anti-aliased edge need a different
+    value than 100%.  
+
+( I should read that again to check the math ..)
+
+Then, first GL will clip the parts out entirely that aren't displaying.
+then it will alpha check the ones that are, and hopefully only blend those
+that have the right value - with the background underneath them.
+
+This makes the sprites, anti-aliased sprites that are also auto-masked.
+and hopefully the portions that you dont want blended OR masked will just
+show up in front of what's ever behind them in the z-buffer.
+
+------------
+IDEA 2:
+
+Z-buffer.  every draw call called from the main render line, have the render
+pipe compute a z height and pass it into the function, then, layer each 
+successive thing a certain height (equally across all calls, or whatever looks
+coolest) so that the last thing drawn will be the nearest to the camera.
+
+then change the perspective from glOrtho, to glViewport or whatever the damn
+function is.  but hopefully keeping it looking 100% the same way.  just flat
+and 2D.
+
+Then, move the board away from the camera slightly, and rotate it.  The images
+will jump off the board.
+
+----------------
+IDEA 2-b:
+
+3D pacman.  Instead of a disk, pacman is a globe.  you rotate the game, where
+there is a square gameboard, with the mouse and move it nearer and further 
+from you, and rotate it, and then ddraw the board camera up near to where
+the action is, but instead the boards are cubic, same dimension, but just 
+added one, and the dots hang in space.  everything is the same, but cubed.
+
+it would be pac3.  or pacman cubed.  I should see if I could buy the rights
+first.  
+
+and you use your left hand, the fps keys to move in the maze.  and the beams,
+there are no hard beams, but there are cubic spaces filled with alpha blended
+blue, very light shade of blended blue, over a black background or whatever.
+
+same dots, 3D ghosts.  then add imaginative features like missiles, crazy
+things that run through the halls that if you catch you get a free guy.
+
+original sounds.  not copies.
+
+----
+Honestly, I find myself thinking about the introversion guy.  I really like,
+and am beginning to see what he is doing.  this is someone with a genuine 
+love for programming and games and graphics and is doing what he is best at,
+this procedural thinking and he is 100% original, and good enough that people
+enjoy his stuff.  I loved Uplink.  I played it religiously for a long time.
+He is definitely my second biggest influence in programming.  3rd would probably
+be the games I played as a kid, starflight, privateer, the ones with a good
+sense of humor. leisure suit larry.   kings quest.  but who knows where it left off, I also played several 100 Atari2600 games religiously, several hundred NES games, the same, and then more computer games after that.
+
+then I guess not many for a few years, then back in iowa city, just tons.  
+every game, every emulator.
+
+----
+
+sent letter to Chris Delay here, its in logs\misc.  he hasn't responded yet.
+
+---------------------
+p2_1 - 1st of all, define what the goal is :
+        to adjust the alpha channel in the images when compiling them so 
+        that, the stuff we dont want rendered is 0, the stuff we want rendered
+        is 100, and the anti-aliased parts around the edges, only have the
+        anti-aliased part of the real image in it, nothing else, and the alpha
+        is set to some low value (ie 20-40%) that they blend with the back
+        ground when rendered, thus continue to be antialiased, but also 
+        slightly translucent.
+p2_2 - the way to do this is to not put any background in photoshop, a 
+        translucent image format, which image formats support this?, then read 
+        in the alpha channel from photoshop itself.  do images have 32-bit 
+        support?
+        which ones?  TGA's probably do.  save as TGA32, make another section
+        in the image code.  then, the alpha will presumably be set properly
+        for both theh image and the edge, and everything that is not the edge, 
+        set the alpha at the alpha clip value, and it will just be clipped
+        completely, only blending the parts we want blended.
+
+---------------------------------------------
+:: This Weekend ::
+
+    - 3D, raise the sprites, change the perspective matrix
+    - figure out proper alpha channel/blending stuff
+    - add libpng code to codebase (if it is needed I guess)
+    - port whole thing to native C++
+    - re-write the font code  
+    - get GL_ALPHA_TEST working in all places (map tiles & fonts namely)
+    - clean up the font, either remake from scratch or modify the current
+        somehow.  
+    - add corners to the pathfind lines
+    - after C++ extend the OpenGL lib to include:
+        GPU detection, all GL pointers native from DLL, 
+
+After playing Cave Story my game actually doesn't look that bad.  It really
+needs sound.  Sound has such an emotional effect on the player.  and fruit,
+and the font needs cleaning, and death animations, but really -- sound !
+
+todo: research contests that I could enter pacman in. 
+
+- Get "Paint Shop Pro" , spend some time in one or more drawing programs
+and really learn them.
+
+- Learn fstreams (later, perhaps bad, carmack doesn't use them...)
+
+- start the videogameresearchlaboratories website soon. vgrl.org or vrl.org, 
+    well, pick a name, get pro hosting, install wordpress, all that stuff.
+    there's a log somewhere.
+
+- Convert Everything to Unicde or UTF-16, 16-bit chars, more reading...
+
+---------
+alright, which one do I start on?
+X - add corners to the pathfind lines
+2 - convert codebase to c++.
+X - work on getting alpha channel data from photoshop, into the code via
+    libpng or whatever, and displaying properly.
+4 - Sound code, 
+5 - Make sound
+6 - Make fruit
+
+update: ok, I added the corners, that didn't take long, so then I moved
+onto anti-aliasing/blending techniques, and came up with squat.  I learned
+a little photoshop, but spent about 6 hours, until I finally figured out 
+that anti-aliasing sprite edges is just a bad idea.  Then I read a pixeling
+tut that derekyu put up a while ago, and one of his last steps was anti-
+aliasing, and he says not to anti-alias aroundthe edges because it gives
+the sprite a kinda dull halo that looks like shit.  bingo!  this is what I
+got from doing it.  not to mention that alpha-blending the sprites makes them
+do all sorts of stupid stuff, given the background, ... 
+
+so I'm going to re-do pacman, do the death animation while I'm at it, and
+also re-do the sprites in 32x32 bmps w/ Alpha channel mask.  I did however
+learn about Alpha channels and which ones work for me.  
+
+Also, I added bitmap loading code, which works.  and now my deal reads the
+file extension to decide which routine to pass it to to load it.
+
+so another round of sprites, turn off blending, and I'll move on.  I spose
+I should do some fruit too while I'm at it.  
+
+then perhaps I should re-create the subversion archive so-as to not let it
+get too weighty, but ahh , fuckit.
+--------------------
+new strategy:
+- make pacman death animation
+- add sound code
+- make sounds for the sound code
+- make fruit
+- improve the AI a bit more
+- fix up the title screens
+
+--------------
+got lamothe's book yesterday.  I had started to read the DirectSound code but
+got bored.  I imported an image to use in the splash and found out that 24-bit
+bmp's aren't displaying, but if I load it as a TGA it does display.  Here, I 
+should convert it just to prove succinctly.  that means that my bitmap code 
+only loads 32-bit bitmaps, probably in the bit order.
+
+yes, i converted the exact image to a tga, so now I have house.bmp & house.tga,
+and the tga displays, and the house doesn't.  house.tga is 12 bytes larger.
+I am tired and in pain.  I cant keep programming more and more.  my muscles
+and my body are going to mutiny.
+
+In my tired state I am not getting much done these days.  I started that photoshop project on saturday, and quit by 10pm, unfinished.  I haven't picked it up since.  I've started a couple other projects since, but everything has been left unfinished.  I spose I should finish the photoshopping , but its not as important
+as the other stuff.  this bitmap thing is just unacceptable, I better fix it.
+
+FUCking classic, I just found it:  I make this error alot,
+
+while ((j = fread(&img->data[i], 1, 8192, fp)) > 0)
+    i += j;
+
+2/3 times i forget to dereference the place that I am reading to or advance
+its pointer.  might be fasterr to just keep a pointer, and advance it.
+
+ok, so what todo tonight?  Sound Code.  I have all the resources I am going
+to need.  I need to build a DirectSound Mixer, that is the plan.  first play
+a sound, then read quake3 and the other mixer example I have.  and then 
+google more.
+
+TO A MIXER!!! ONWARDSSSSS!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
